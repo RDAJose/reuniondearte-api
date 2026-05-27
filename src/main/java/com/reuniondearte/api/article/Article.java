@@ -125,6 +125,60 @@ public class Article {
         return readingTimeMinutes;
     }
 
+    public void applyEditorialUpdate(
+            String title,
+            String slug,
+            String excerpt,
+            String contentMarkdown,
+            ArticleStatus status,
+            Category primaryCategory,
+            OffsetDateTime publishedAt,
+            String canonicalUrl
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.title = title;
+        this.slug = slug;
+        this.excerpt = excerpt;
+        this.contentMarkdown = contentMarkdown;
+        this.contentHtml = null;
+        this.status = status;
+        this.primaryCategory = primaryCategory;
+        this.publishedAt = status == ArticleStatus.published ? publishedAt : null;
+        this.scheduledAt = null;
+        this.canonicalUrl = canonicalUrl;
+        this.readingTimeMinutes = calculateReadingTime(contentMarkdown);
+        this.language = "es";
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
+    }
+
+    public void changeStatus(ArticleStatus status) {
+        this.status = status;
+        if (status != ArticleStatus.published) {
+            this.publishedAt = null;
+        } else if (this.publishedAt == null) {
+            this.publishedAt = OffsetDateTime.now();
+        }
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void publishNow() {
+        this.status = ArticleStatus.published;
+        if (this.publishedAt == null) {
+            this.publishedAt = OffsetDateTime.now();
+        }
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void moveToDraft() {
+        this.status = ArticleStatus.draft;
+        this.publishedAt = null;
+        this.scheduledAt = null;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void applyLegacyDraftImport(
             String title,
             String slug,
@@ -153,5 +207,13 @@ public class Article {
             this.createdAt = now;
         }
         this.updatedAt = now;
+    }
+
+    private Integer calculateReadingTime(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+        int words = content.trim().split("\\s+").length;
+        return Math.max(1, (int) Math.ceil(words / 220.0));
     }
 }

@@ -10,9 +10,15 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findByStatusOrderByPublishedAtDesc(ArticleStatus status);
 
     @EntityGraph(attributePaths = {"author", "primaryCategory", "coverMedia"})
+    List<Article> findByStatusOrderByUpdatedAtDesc(ArticleStatus status);
+
+    @EntityGraph(attributePaths = {"author", "primaryCategory", "coverMedia"})
     Optional<Article> findBySlugAndStatus(String slug, ArticleStatus status);
 
     Optional<Article> findBySlug(String slug);
+
+    @EntityGraph(attributePaths = {"author", "primaryCategory", "coverMedia"})
+    Optional<Article> findWithRelationsById(Long id);
 
     @EntityGraph(attributePaths = {"author", "primaryCategory", "coverMedia"})
     List<Article> findByPrimaryCategorySlugAndStatusOrderByPublishedAtDesc(String slug, ArticleStatus status);

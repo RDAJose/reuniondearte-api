@@ -47,5 +47,37 @@ public class SeoMetadata {
     private Boolean noindex;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
-}
 
+    public Long getId() {
+        return id;
+    }
+
+    public String getMetaTitle() {
+        return metaTitle;
+    }
+
+    public String getMetaDescription() {
+        return metaDescription;
+    }
+
+    public Boolean getNoindex() {
+        return noindex;
+    }
+
+    public void applyEditorialUpdate(Article article, String metaTitle, String metaDescription, String canonicalUrl, Boolean noindex) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.article = article;
+        this.metaTitle = metaTitle;
+        this.metaDescription = metaDescription;
+        this.ogTitle = metaTitle;
+        this.ogDescription = metaDescription;
+        this.twitterTitle = metaTitle;
+        this.twitterDescription = metaDescription;
+        this.canonicalUrl = canonicalUrl;
+        this.noindex = noindex != null && noindex;
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
+    }
+}
