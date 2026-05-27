@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${RDA_DB_HOST:127.0.0.1}:${RDA_DB_PORT:55432}/${RDA_DB_NAME:reuniondearte}
+    username: ${RDA_DB_USER:reuniondearte}
+    password: ${RDA_DB_PASSWORD:reuniondearte_dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+logging:
+  level:
+    org.hibernate.SQL: warn
