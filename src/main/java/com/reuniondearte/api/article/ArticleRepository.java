@@ -12,7 +12,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @EntityGraph(attributePaths = {"author", "primaryCategory", "coverMedia"})
     Optional<Article> findBySlugAndStatus(String slug, ArticleStatus status);
 
+    Optional<Article> findBySlug(String slug);
+
     @EntityGraph(attributePaths = {"author", "primaryCategory", "coverMedia"})
     List<Article> findByPrimaryCategorySlugAndStatusOrderByPublishedAtDesc(String slug, ArticleStatus status);
 }
-

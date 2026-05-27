@@ -85,6 +85,10 @@ public class Article {
         return excerpt;
     }
 
+    public String getContentMarkdown() {
+        return contentMarkdown;
+    }
+
     public String getContentHtml() {
         return contentHtml;
     }
@@ -109,6 +113,10 @@ public class Article {
         return publishedAt;
     }
 
+    public String getImportOriginalPath() {
+        return importOriginalPath;
+    }
+
     public String getCanonicalUrl() {
         return canonicalUrl;
     }
@@ -116,5 +124,34 @@ public class Article {
     public Integer getReadingTimeMinutes() {
         return readingTimeMinutes;
     }
-}
 
+    public void applyLegacyDraftImport(
+            String title,
+            String slug,
+            String excerpt,
+            String contentMarkdown,
+            Category primaryCategory,
+            String importSource,
+            String importOriginalPath,
+            Integer readingTimeMinutes
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.title = title;
+        this.slug = slug;
+        this.excerpt = excerpt;
+        this.contentMarkdown = contentMarkdown;
+        this.contentHtml = null;
+        this.status = ArticleStatus.draft;
+        this.primaryCategory = primaryCategory;
+        this.publishedAt = null;
+        this.scheduledAt = null;
+        this.importSource = importSource;
+        this.importOriginalPath = importOriginalPath;
+        this.readingTimeMinutes = readingTimeMinutes;
+        this.language = "es";
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
+    }
+}
