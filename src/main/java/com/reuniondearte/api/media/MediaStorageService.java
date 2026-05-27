@@ -1,12 +1,8 @@
 package com.reuniondearte.api.media;
 
-import com.reuniondearte.api.config.StorageProperties;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Map;
 import javax.imageio.ImageIO;
@@ -25,10 +21,10 @@ public class MediaStorageService {
             "webp", "image/webp"
     );
 
-    private final StorageProperties storageProperties;
+    private final MediaStorageProvider storageProvider;
 
-    public MediaStorageService(StorageProperties storageProperties) {
-        this.storageProperties = storageProperties;
+    public MediaStorageService(MediaStorageProvider storageProvider) {
+        this.storageProvider = storageProvider;
     }
 
     public StoredImage storeArticleCover(String articleSlug, MultipartFile file) {
@@ -52,36 +48,23 @@ public class MediaStorageService {
         ImageSize imageSize = readImageSize(file, extension);
         String safeSlug = safeSlug(articleSlug);
         String filename = "cover." + extension;
-        Path mediaRoot = Path.of(storageProperties.mediaRoot()).toAbsolutePath().normalize();
-        Path articleDirectory = mediaRoot.resolve(Path.of("articles", safeSlug)).normalize();
-        Path target = articleDirectory.resolve(filename).normalize();
-        if (!target.startsWith(mediaRoot)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid media path");
-        }
-
+        String storagePath = "articles/" + safeSlug + "/" + filename;
+        MediaStorageProvider.StoredObject storedObject;
         try {
-            Files.createDirectories(articleDirectory);
-            Path temp = Files.createTempFile(articleDirectory, "cover-", ".upload");
             try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, temp, StandardCopyOption.REPLACE_EXISTING);
-            }
-            try {
-                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (IOException atomicMoveFailure) {
-                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+                storedObject = storageProvider.store(storagePath, filename, expectedMimeType, file.getSize(), inputStream);
             }
         } catch (IOException exception) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not store image file", exception);
         }
 
-        String storagePath = "articles/" + safeSlug + "/" + filename;
-        String publicUrl = publicBaseUrl() + "/media/" + storagePath;
         return new StoredImage(
-                storagePath,
-                publicUrl,
-                filename,
-                expectedMimeType,
-                file.getSize(),
+                storedObject.storageProvider(),
+                storedObject.storagePath(),
+                storedObject.publicUrl(),
+                storedObject.filename(),
+                storedObject.mimeType(),
+                storedObject.sizeBytes(),
                 imageSize.width(),
                 imageSize.height()
         );
@@ -125,14 +108,6 @@ public class MediaStorageService {
         return slug;
     }
 
-    private String publicBaseUrl() {
-        String baseUrl = storageProperties.publicBaseUrl();
-        if (baseUrl == null || baseUrl.isBlank()) {
-            return "http://localhost:8080";
-        }
-        return baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-    }
-
     private String normalize(String contentType) {
         return contentType == null || contentType.isBlank() ? null : contentType.toLowerCase(Locale.ROOT);
     }
@@ -141,6 +116,7 @@ public class MediaStorageService {
     }
 
     public record StoredImage(
+            String storageProvider,
             String storagePath,
             String publicUrl,
             String filename,

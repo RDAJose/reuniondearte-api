@@ -53,7 +53,8 @@ public class AdminArticleMediaController {
 
         MediaStorageService.StoredImage storedImage = mediaStorage.storeArticleCover(article.getSlug(), file);
         MediaAsset mediaAsset = new MediaAsset();
-        mediaAsset.applyLocalImage(
+        mediaAsset.applyStoredImage(
+                storedImage.storageProvider(),
                 storedImage.storagePath(),
                 storedImage.publicUrl(),
                 storedImage.filename(),
