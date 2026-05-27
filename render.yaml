@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: reuniondearte-api
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: 8080
+      - key: DATABASE_URL
+        sync: false
+      - key: RDA_ADMIN_USER
+        sync: false
+      - key: RDA_ADMIN_PASSWORD
+        sync: false
+      - key: RDA_PUBLIC_BASE_URL
+        sync: false
+      - key: RDA_ALLOWED_ORIGINS
+        sync: false
+      - key: RDA_STORAGE_PROVIDER
+        value: s3
+      - key: RDA_S3_ENDPOINT
+        sync: false
+      - key: RDA_S3_REGION
+        value: auto
+      - key: RDA_S3_BUCKET
+        sync: false
+      - key: RDA_S3_ACCESS_KEY
+        sync: false
+      - key: RDA_S3_SECRET_KEY
+        sync: false
+      - key: RDA_S3_PUBLIC_BASE_URL
+        sync: false

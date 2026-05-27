@@ -23,6 +23,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/featured").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/admin", "/admin/**").authenticated()
@@ -36,8 +37,12 @@ public class SecurityConfig {
     @Bean
     UserDetailsService userDetailsService(
             @Value("${RDA_ADMIN_USER:admin}") String adminUser,
-            @Value("${RDA_ADMIN_PASSWORD:admin_dev_password}") String adminPassword
+            @Value("${RDA_ADMIN_PASSWORD:admin_dev_password}") String adminPassword,
+            @Value("${spring.profiles.active:}") String activeProfiles
     ) {
+        if (activeProfiles.contains("prod") && ("admin".equals(adminUser) || "admin_dev_password".equals(adminPassword))) {
+            throw new IllegalStateException("Production admin credentials must be set with RDA_ADMIN_USER and RDA_ADMIN_PASSWORD");
+        }
         PasswordEncoder encoder = passwordEncoder();
         return new InMemoryUserDetailsManager(User.withUsername(adminUser)
                 .password(encoder.encode(adminPassword))
