@@ -1,12 +1,13 @@
 package com.reuniondearte.api;
 
 import com.reuniondearte.api.config.StorageProperties;
+import com.reuniondearte.api.importer.legacy.LegacyScanProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(StorageProperties.class)
+@EnableConfigurationProperties({StorageProperties.class, LegacyScanProperties.class})
 public class ReuniondearteApiApplication {
 
 	public static void main(String[] args) {
