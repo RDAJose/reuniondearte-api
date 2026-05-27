@@ -179,6 +179,11 @@ public class Article {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    public void updateCoverMedia(MediaAsset coverMedia) {
+        this.coverMedia = coverMedia;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void applyLegacyDraftImport(
             String title,
             String slug,

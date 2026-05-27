@@ -9,6 +9,10 @@ public record ArticleSummaryResponse(
         String excerpt,
         String category,
         String author,
+        String coverImage,
+        String coverAlt,
+        String coverCaption,
+        String coverCredit,
         String coverImageUrl,
         String coverAltText,
         OffsetDateTime publishedAt,
@@ -18,8 +22,11 @@ public record ArticleSummaryResponse(
     public static ArticleSummaryResponse from(Article article) {
         var category = article.getPrimaryCategory() == null ? null : article.getPrimaryCategory().getSlug();
         var author = article.getAuthor() == null ? null : article.getAuthor().getName();
-        var coverUrl = article.getCoverMedia() == null ? null : article.getCoverMedia().getPublicUrl();
-        var coverAlt = article.getCoverMedia() == null ? null : article.getCoverMedia().getAltText();
+        var cover = article.getCoverMedia();
+        var coverUrl = cover == null ? null : cover.getPublicUrl();
+        var coverAlt = cover == null ? null : cover.getAltText();
+        var coverCaption = cover == null ? null : cover.getCaption();
+        var coverCredit = cover == null ? null : cover.getCredit();
         return new ArticleSummaryResponse(
                 article.getId(),
                 article.getTitle(),
@@ -27,6 +34,10 @@ public record ArticleSummaryResponse(
                 article.getExcerpt(),
                 category,
                 author,
+                coverUrl,
+                coverAlt,
+                coverCaption,
+                coverCredit,
                 coverUrl,
                 coverAlt,
                 article.getPublishedAt(),

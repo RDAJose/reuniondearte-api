@@ -64,5 +64,71 @@ public class MediaAsset {
     public String getAltText() {
         return altText;
     }
-}
 
+    public String getCaption() {
+        return caption;
+    }
+
+    public String getCredit() {
+        return credit;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public Long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public Integer getWidth() {
+        return width;
+    }
+
+    public Integer getHeight() {
+        return height;
+    }
+
+    public void applyLocalImage(
+            String storagePath,
+            String publicUrl,
+            String filename,
+            String mimeType,
+            Long sizeBytes,
+            Integer width,
+            Integer height,
+            String altText,
+            String caption,
+            String credit,
+            String sourceUrl,
+            String rightsNotes
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.mediaType = "image";
+        this.storageProvider = "local";
+        this.storagePath = storagePath;
+        this.publicUrl = publicUrl;
+        this.filename = filename;
+        this.mimeType = mimeType;
+        this.sizeBytes = sizeBytes;
+        this.width = width;
+        this.height = height;
+        this.altText = altText;
+        this.caption = caption;
+        this.credit = credit;
+        this.sourceUrl = sourceUrl;
+        this.rightsNotes = rightsNotes;
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
+    }
+}

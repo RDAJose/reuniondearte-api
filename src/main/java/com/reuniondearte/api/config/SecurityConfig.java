@@ -23,6 +23,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/featured").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/admin/**").authenticated()
                         .anyRequest().denyAll()
                 )
