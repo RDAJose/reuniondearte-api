@@ -50,11 +50,17 @@ public class LegacyCandidateImportRunner implements ApplicationRunner {
             throw new IllegalArgumentException("Legacy candidates file not found: " + candidatesFile);
         }
 
-        log.info("Creating PostgreSQL backup before legacy import");
-        Path backupPath = backupService.createPostgresBackup();
-        log.info("Backup created at {}", backupPath);
+        String backupPath;
+        if (properties.skipLegacyImportBackup()) {
+            log.info("Skipping legacy import backup because app.skipLegacyImportBackup=true");
+            backupPath = "skipped";
+        } else {
+            log.info("Creating PostgreSQL backup before legacy import");
+            backupPath = backupService.createPostgresBackup().toString();
+            log.info("Backup created at {}", backupPath);
+        }
 
-        LegacyCandidateImportReport report = importer.importCandidates(candidatesFile, backupPath.toString());
+        LegacyCandidateImportReport report = importer.importCandidates(candidatesFile, backupPath);
         Path outputRoot = Path.of(storageProperties.importLogRoot()).toAbsolutePath().normalize();
         LegacyCandidateImportReportWriter.WrittenImportReports writtenReports = reportWriter.write(report, outputRoot);
 
