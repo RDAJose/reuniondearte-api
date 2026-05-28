@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -43,6 +44,7 @@ class ImportedArticleNormalizer {
     private final ArticleRevisionRepository revisions;
     private final MediaStorageService mediaStorage;
     private final StorageProperties storageProperties;
+    private final ImportedArticleNormalizeProperties properties;
     private final EntityManager entityManager;
     private final ImportedArticleHtmlToMarkdownConverter htmlToMarkdown = new ImportedArticleHtmlToMarkdownConverter();
 
@@ -53,6 +55,7 @@ class ImportedArticleNormalizer {
             ArticleRevisionRepository revisions,
             MediaStorageService mediaStorage,
             StorageProperties storageProperties,
+            ImportedArticleNormalizeProperties properties,
             EntityManager entityManager
     ) {
         this.articles = articles;
@@ -61,19 +64,22 @@ class ImportedArticleNormalizer {
         this.revisions = revisions;
         this.mediaStorage = mediaStorage;
         this.storageProperties = storageProperties;
+        this.properties = properties;
         this.entityManager = entityManager;
     }
 
     @Transactional
     public ImportedArticleNormalizeReport run(String action, boolean apply, boolean clearHtml) {
         List<Article> allArticles = articles.findAll();
+        Set<String> ownMediaPublicUrls = ownMediaPublicUrls();
         Map<Long, Map<String, String>> legacyImages = legacyImageColumns(allArticles);
         List<ImportedArticleNormalizeReport.ArticleEntry> entries = new ArrayList<>();
         int converted = 0;
         int imported = 0;
+        int metadataUpdated = 0;
 
         for (Article article : allArticles) {
-            Analysis analysis = analyze(article, legacyImages.getOrDefault(article.getId(), Map.of()));
+            Analysis analysis = analyze(article, legacyImages.getOrDefault(article.getId(), Map.of()), ownMediaPublicUrls);
             if ("convert".equals(action) && apply && analysis.needsHtmlConversion()) {
                 revisions.save(ArticleRevision.importedArticleBackup(article, "Backup before imported article Markdown normalization"));
                 article.normalizeImportedContent(htmlToMarkdown.convert(article.getContentHtml()), clearHtml);
@@ -98,13 +104,21 @@ class ImportedArticleNormalizer {
                     analysis.notes().add("dry-run: external images would be downloaded, uploaded to R2, and replaced");
                 }
             }
+            if ("metadata".equals(action)
+                    && propertiesMatch(article)
+                    && applyExistingImageMetadata(article, apply)) {
+                if (apply) {
+                    metadataUpdated++;
+                }
+                analysis.notes().add(apply ? "existing image metadata updated" : "dry-run: existing image metadata would be updated");
+            }
             entries.add(entry(article, analysis));
         }
 
-        return report(action, apply, allArticles, entries, converted, imported);
+        return report(action, apply, allArticles, entries, converted, imported, metadataUpdated);
     }
 
-    private Analysis analyze(Article article, Map<String, String> legacyImageFields) {
+    private Analysis analyze(Article article, Map<String, String> legacyImageFields, Set<String> ownMediaPublicUrls) {
         List<String> classes = new ArrayList<>();
         List<String> notes = new ArrayList<>();
         String markdown = article.getContentMarkdown();
@@ -132,63 +146,119 @@ class ImportedArticleNormalizer {
             classes.add("necesita revision manual");
         }
 
-        List<ImportedArticleImageReference> externalImages = externalImages(article, legacyImageFields);
-        if (externalImages.isEmpty() && article.getCoverMedia() == null) {
+        List<ImportedArticleImageReference> r2Images = new ArrayList<>();
+        List<ImportedArticleImageReference> externalImages = categorizedImages(article, legacyImageFields, ownMediaPublicUrls, r2Images);
+        if (r2Images.isEmpty() && externalImages.isEmpty() && article.getCoverMedia() == null) {
             classes.add("no tiene imagen");
         }
-        if (!externalImages.isEmpty()) {
-            classes.add("tiene imagenes externas recuperables");
+        if (!r2Images.isEmpty()) {
+            classes.add("imagen ya en R2");
         }
-        if (legalReviewPending(article, externalImages)) {
-            classes.add("posible problema legal: sourceUrl/credit/rightsNotes vacios");
+        if (!externalImages.isEmpty()) {
+            classes.add("imagen externa recuperable");
+        }
+        if (r2LegalReviewPending(article, ownMediaPublicUrls)) {
+            classes.add("imagen en R2 con revision legal pendiente");
+        }
+        if (externalLegalReviewPending(externalImages)) {
+            classes.add("imagen con metadatos legales incompletos");
         }
         if (needsHtmlConversion && isBlank(html) && markdownLooksHtml) {
             classes.add("necesita revision manual");
         }
-        return new Analysis(classes, notes, externalImages, needsHtmlConversion);
+        return new Analysis(classes, notes, r2Images, externalImages, needsHtmlConversion);
     }
 
-    private List<ImportedArticleImageReference> externalImages(Article article, Map<String, String> legacyImageFields) {
-        Map<String, ImportedArticleImageReference> images = new LinkedHashMap<>();
-        collectMarkdownImages(article.getContentMarkdown(), "contentMarkdown", images);
-        collectHtmlImages(article.getContentHtml(), "contentHtml", images);
+    private List<ImportedArticleImageReference> categorizedImages(
+            Article article,
+            Map<String, String> legacyImageFields,
+            Set<String> ownMediaPublicUrls,
+            List<ImportedArticleImageReference> r2Images
+    ) {
+        Map<String, ImportedArticleImageReference> externalImages = new LinkedHashMap<>();
+        Map<String, ImportedArticleImageReference> r2ImageMap = new LinkedHashMap<>();
+        collectMarkdownImages(article.getContentMarkdown(), "contentMarkdown", externalImages, r2ImageMap, ownMediaPublicUrls);
+        collectHtmlImages(article.getContentHtml(), "contentHtml", externalImages, r2ImageMap, ownMediaPublicUrls);
         MediaAsset cover = article.getCoverMedia();
-        if (cover != null && isExternalUrl(cover.getPublicUrl())) {
-            images.putIfAbsent(cover.getPublicUrl(), new ImportedArticleImageReference(
-                    "coverMedia.publicUrl", cover.getPublicUrl(), cover.getAltText(), cover.getCaption(), cover.getCredit()
-            ));
+        addStoredImage("coverMedia.publicUrl", cover, externalImages, r2ImageMap, ownMediaPublicUrls);
+        for (ArticleMedia bodyMedia : articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body")) {
+            addStoredImage("bodyMedia.publicUrl", bodyMedia.getMediaAsset(), externalImages, r2ImageMap, ownMediaPublicUrls);
         }
         for (Map.Entry<String, String> field : legacyImageFields.entrySet()) {
-            if (isExternalUrl(field.getValue())) {
-                images.putIfAbsent(field.getValue(), new ImportedArticleImageReference(field.getKey(), field.getValue(), article.getTitle(), null, null));
+            ImageUrlKind kind = imageUrlKind(field.getValue(), ownMediaPublicUrls);
+            if (kind == ImageUrlKind.EXTERNAL) {
+                externalImages.putIfAbsent(field.getValue(), new ImportedArticleImageReference(field.getKey(), field.getValue(), article.getTitle(), null, null));
+            } else if (kind == ImageUrlKind.R2) {
+                r2ImageMap.putIfAbsent(field.getValue(), new ImportedArticleImageReference(field.getKey(), field.getValue(), article.getTitle(), null, null));
             }
         }
-        return new ArrayList<>(images.values());
+        r2Images.addAll(r2ImageMap.values());
+        return new ArrayList<>(externalImages.values());
     }
 
-    private void collectMarkdownImages(String markdown, String field, Map<String, ImportedArticleImageReference> images) {
+    private void addStoredImage(
+            String field,
+            MediaAsset mediaAsset,
+            Map<String, ImportedArticleImageReference> externalImages,
+            Map<String, ImportedArticleImageReference> r2Images,
+            Set<String> ownMediaPublicUrls
+    ) {
+        if (mediaAsset == null || isBlank(mediaAsset.getPublicUrl())) {
+            return;
+        }
+        ImportedArticleImageReference reference = new ImportedArticleImageReference(
+                field, mediaAsset.getPublicUrl(), mediaAsset.getAltText(), mediaAsset.getCaption(), mediaAsset.getCredit()
+        );
+        ImageUrlKind kind = imageUrlKind(mediaAsset.getPublicUrl(), ownMediaPublicUrls);
+        if (kind == ImageUrlKind.R2) {
+            r2Images.putIfAbsent(mediaAsset.getPublicUrl(), reference);
+        } else if (kind == ImageUrlKind.EXTERNAL) {
+            externalImages.putIfAbsent(mediaAsset.getPublicUrl(), reference);
+        }
+    }
+
+    private void collectMarkdownImages(
+            String markdown,
+            String field,
+            Map<String, ImportedArticleImageReference> externalImages,
+            Map<String, ImportedArticleImageReference> r2Images,
+            Set<String> ownMediaPublicUrls
+    ) {
         if (isBlank(markdown)) {
             return;
         }
         Matcher matcher = MARKDOWN_IMAGE.matcher(markdown);
         while (matcher.find()) {
             String url = matcher.group(2);
-            if (isExternalUrl(url)) {
-                images.putIfAbsent(url, new ImportedArticleImageReference(field, url, matcher.group(1), null, null));
+            ImageUrlKind kind = imageUrlKind(url, ownMediaPublicUrls);
+            if (kind == ImageUrlKind.EXTERNAL) {
+                externalImages.putIfAbsent(url, new ImportedArticleImageReference(field, url, matcher.group(1), null, null));
+            } else if (kind == ImageUrlKind.R2) {
+                r2Images.putIfAbsent(url, new ImportedArticleImageReference(field, url, matcher.group(1), null, null));
             }
         }
     }
 
-    private void collectHtmlImages(String html, String field, Map<String, ImportedArticleImageReference> images) {
+    private void collectHtmlImages(
+            String html,
+            String field,
+            Map<String, ImportedArticleImageReference> externalImages,
+            Map<String, ImportedArticleImageReference> r2Images,
+            Set<String> ownMediaPublicUrls
+    ) {
         if (isBlank(html)) {
             return;
         }
         for (Element image : Jsoup.parseBodyFragment(html).select("img[src]")) {
             String url = image.attr("src").trim();
-            if (isExternalUrl(url)) {
-                images.putIfAbsent(url, new ImportedArticleImageReference(
-                        field, url, image.attr("alt").trim(), image.attr("data-caption").trim(), image.attr("data-credit").trim()
-                ));
+            ImageUrlKind kind = imageUrlKind(url, ownMediaPublicUrls);
+            ImportedArticleImageReference reference = new ImportedArticleImageReference(
+                    field, url, image.attr("alt").trim(), image.attr("data-caption").trim(), image.attr("data-credit").trim()
+            );
+            if (kind == ImageUrlKind.EXTERNAL) {
+                externalImages.putIfAbsent(url, reference);
+            } else if (kind == ImageUrlKind.R2) {
+                r2Images.putIfAbsent(url, reference);
             }
         }
     }
@@ -249,10 +319,60 @@ class ImportedArticleNormalizer {
         return replaced;
     }
 
-    private boolean legalReviewPending(Article article, List<ImportedArticleImageReference> externalImages) {
+    private boolean applyExistingImageMetadata(Article article, boolean apply) {
+        MediaAsset mediaAsset = existingImageForMetadata(article);
+        if (mediaAsset == null) {
+            return false;
+        }
+        if (!apply) {
+            return true;
+        }
+        mediaAsset.updateEditorialMetadata(
+                fallback(properties.articleNormalizeAltText(), mediaAsset.getAltText()),
+                fallback(properties.articleNormalizeCaption(), mediaAsset.getCaption()),
+                fallback(properties.articleNormalizeCredit(), mediaAsset.getCredit()),
+                fallback(properties.articleNormalizeSourceUrl(), mediaAsset.getSourceUrl()),
+                fallback(properties.articleNormalizeRightsNotes(), mediaAsset.getRightsNotes())
+        );
+        mediaAssets.save(mediaAsset);
+        return true;
+    }
+
+    private MediaAsset existingImageForMetadata(Article article) {
+        String role = properties.articleNormalizeImageRole() == null || properties.articleNormalizeImageRole().isBlank()
+                ? "cover"
+                : properties.articleNormalizeImageRole().trim().toLowerCase(Locale.ROOT);
+        if ("cover".equals(role)) {
+            return article.getCoverMedia();
+        }
+        if ("body".equals(role)) {
+            List<ArticleMedia> bodyImages = articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body");
+            return bodyImages.size() == 1 ? bodyImages.getFirst().getMediaAsset() : null;
+        }
+        return null;
+    }
+
+    private boolean propertiesMatch(Article article) {
+        return properties.articleNormalizeArticleId() != null && properties.articleNormalizeArticleId().equals(article.getId());
+    }
+
+    private boolean r2LegalReviewPending(Article article, Set<String> ownMediaPublicUrls) {
         MediaAsset cover = article.getCoverMedia();
-        boolean coverIncomplete = cover != null && (isBlank(cover.getSourceUrl()) || isBlank(cover.getCredit()) || isBlank(cover.getRightsNotes()));
-        return coverIncomplete || externalImages.stream().anyMatch(image -> isBlank(image.credit()));
+        if (legalMetadataIncomplete(cover) && imageUrlKind(cover.getPublicUrl(), ownMediaPublicUrls) == ImageUrlKind.R2) {
+            return true;
+        }
+        return articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body").stream()
+                .map(ArticleMedia::getMediaAsset)
+                .anyMatch(media -> legalMetadataIncomplete(media) && imageUrlKind(media.getPublicUrl(), ownMediaPublicUrls) == ImageUrlKind.R2);
+    }
+
+    private boolean legalMetadataIncomplete(MediaAsset mediaAsset) {
+        return mediaAsset != null
+                && (isBlank(mediaAsset.getSourceUrl()) || isBlank(mediaAsset.getCredit()) || isBlank(mediaAsset.getRightsNotes()));
+    }
+
+    private boolean externalLegalReviewPending(List<ImportedArticleImageReference> externalImages) {
+        return externalImages.stream().anyMatch(image -> isBlank(image.credit()));
     }
 
     private ImportedArticleNormalizeReport report(
@@ -261,7 +381,8 @@ class ImportedArticleNormalizer {
             List<Article> allArticles,
             List<ImportedArticleNormalizeReport.ArticleEntry> entries,
             int converted,
-            int imported
+            int imported,
+            int metadataUpdated
     ) {
         return new ImportedArticleNormalizeReport(
                 OffsetDateTime.now().toString(),
@@ -273,12 +394,15 @@ class ImportedArticleNormalizer {
                 countStatus(allArticles, ArticleStatus.published),
                 count(entries, "listo para Markdown"),
                 count(entries, "necesita conversion HTML -> Markdown"),
-                count(entries, "tiene imagenes externas recuperables"),
+                count(entries, "imagen ya en R2"),
+                count(entries, "imagen externa recuperable"),
                 count(entries, "no tiene imagen"),
-                count(entries, "posible problema legal: sourceUrl/credit/rightsNotes vacios"),
+                count(entries, "imagen en R2 con revision legal pendiente"),
+                count(entries, "imagen con metadatos legales incompletos"),
                 count(entries, "necesita revision manual"),
                 converted,
                 imported,
+                metadataUpdated,
                 entries
         );
     }
@@ -290,6 +414,7 @@ class ImportedArticleNormalizer {
                 article.getTitle(),
                 article.getStatus().name(),
                 analysis.classifications(),
+                analysis.r2Images().stream().map(image -> image.field() + "=" + image.url()).toList(),
                 analysis.externalImages().stream().map(image -> image.field() + "=" + image.url()).toList(),
                 analysis.notes()
         );
@@ -327,19 +452,32 @@ class ImportedArticleNormalizer {
         return values;
     }
 
-    private boolean isExternalUrl(String value) {
+    private Set<String> ownMediaPublicUrls() {
+        Set<String> urls = new LinkedHashSet<>();
+        for (MediaAsset mediaAsset : mediaAssets.findAll()) {
+            if (!isBlank(mediaAsset.getPublicUrl())) {
+                urls.add(normalizeUrl(mediaAsset.getPublicUrl()));
+            }
+        }
+        return urls;
+    }
+
+    private ImageUrlKind imageUrlKind(String value, Set<String> ownMediaPublicUrls) {
         if (isBlank(value)) {
-            return false;
+            return ImageUrlKind.NONE;
         }
         try {
             URI uri = URI.create(value.trim());
             String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
             if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                return false;
+                return ImageUrlKind.NONE;
             }
-            return !startsWithConfiguredPublicBase(value);
+            if (startsWithConfiguredPublicBase(value) || ownMediaPublicUrls.contains(normalizeUrl(value))) {
+                return ImageUrlKind.R2;
+            }
+            return ImageUrlKind.EXTERNAL;
         } catch (IllegalArgumentException exception) {
-            return false;
+            return ImageUrlKind.NONE;
         }
     }
 
@@ -349,6 +487,10 @@ class ImportedArticleNormalizer {
 
     private boolean startsWith(String value, String prefix) {
         return !isBlank(prefix) && value.startsWith(prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix);
+    }
+
+    private String normalizeUrl(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private int countStatus(List<Article> allArticles, ArticleStatus status) {
@@ -374,11 +516,18 @@ class ImportedArticleNormalizer {
     private record Analysis(
             List<String> classifications,
             List<String> notes,
+            List<ImportedArticleImageReference> r2Images,
             List<ImportedArticleImageReference> externalImages,
             boolean needsHtmlConversion
     ) {
     }
 
     private record ImageImportResult(String markdown, int imported, boolean changed, List<String> notes) {
+    }
+
+    private enum ImageUrlKind {
+        NONE,
+        R2,
+        EXTERNAL
     }
 }

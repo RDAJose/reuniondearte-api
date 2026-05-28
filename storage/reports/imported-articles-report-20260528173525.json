@@ -1,0 +1,418 @@
+{
+  "createdAt" : "2026-05-28T17:35:25.369140700+02:00",
+  "apply" : false,
+  "action" : "report",
+  "total" : 50,
+  "draft" : 48,
+  "review" : 0,
+  "published" : 2,
+  "readyMarkdown" : 1,
+  "needsHtmlConversion" : 0,
+  "withExternalImages" : 2,
+  "withoutImage" : 48,
+  "legalReviewPending" : 2,
+  "manualReview" : 49,
+  "converted" : 0,
+  "imagesImported" : 0,
+  "articles" : [ {
+    "id" : 1,
+    "slug" : "18-curiosidades-inesperadas-de-dracula-de-bram-stoker",
+    "title" : "18 Curiosidades Inesperadas de Drácula de Bram Stoker",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 2,
+    "slug" : "a-girl-walks-home-alone-at-night-el-rodaje-el-comic-y-el-significado-de-una-obra-unica",
+    "title" : "Análisis de A Girl Walks Home Alone at Night",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 3,
+    "slug" : "anora-una-actriz-que-desafia-las-expectativas",
+    "title" : "Anora: Una Actriz que Desafía las Expectativas",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 4,
+    "slug" : "bab-motha-de-kabza-de-small-analisis-del-album-amapiano",
+    "title" : "«Bab’ Motha» de Kabza De Small: Análisis del Álbum Amapiano",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 5,
+    "slug" : "barkley-l-hendricks-elegancia-y-radicalidad-en-el-arte",
+    "title" : "Barkley L. Hendricks: Elegancia y Radicalidad en el Arte",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 6,
+    "slug" : "biografia",
+    "title" : "BIOGRAFÍA",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 7,
+    "slug" : "capitulo-2-luz-de-sal",
+    "title" : "CAPÍTULO 2: LUZ DE SAL",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 8,
+    "slug" : "cuando-el-alma-de-un-pueblo-no-duerme-la-espera-por-la-virgen-del-rocio",
+    "title" : "Cuando el alma de un pueblo no duerme: la espera por la Virgen del Rocío",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 9,
+    "slug" : "cv-jose-luis-olmedo-barrionuevo",
+    "title" : "CV JOSE LUIS OLMEDO BARRIONUEVO",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 10,
+    "slug" : "descubriendo-opus-cuando-la-cultura-pop-se-convierte-en-culto",
+    "title" : "Descubriendo Opus: Cuando la cultura pop se convierte en culto",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 11,
+    "slug" : "dracula-de-bram-stoker-origen-literario-del-mito-y-su-esencia-gotica-mas-pura",
+    "title" : "“Drácula” de Bram Stoker: origen literario del mito y su esencia gótica más pura.",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 12,
+    "slug" : "el-cisne-amenazado-ansiedad-defensa-y-la-necesidad-de-protegerse",
+    "title" : "El cisne amenazado: ansiedad, defensa y la necesidad de protegerse",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 13,
+    "slug" : "el-dracula-cordobes-la-version-espanola-de-1931",
+    "title" : "El Drácula Cordobés: La Versión Española de 1931",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 14,
+    "slug" : "el-legado-de-la-musica-disco-y-northern-soul",
+    "title" : "El Legado de la Música Disco y Northern Soul",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 15,
+    "slug" : "el-viaje-sonoro-de-agora",
+    "title" : "El viaje sonoro de «Agora»",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 16,
+    "slug" : "festival-de-malaga-2025-las-22-peliculas-en-competencia",
+    "title" : "Festival de Málaga 2025: Las 22 Películas en Competencia",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 17,
+    "slug" : "field-complete-nocturnes-alice-sara-ott",
+    "title" : "Field: Complete Nocturnes – Alice Sara Ott",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 18,
+    "slug" : "holiday-crudo-retrato-del-lujo-y-el-sufrimiento",
+    "title" : "Holiday: Crudo Retrato del Lujo y el Sufrimiento",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 19,
+    "slug" : "indlamu-la-danza-zulu-que-golpea-la-historia",
+    "title" : "Indlamu: la danza zulú que golpea la historia",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 20,
+    "slug" : "ingozi-en-maya-nandipha808",
+    "title" : "INGOZI EMNYAMA – Nandipha808",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 21,
+    "slug" : "interiorismo-nazari-reviviendo-espacios-con-ia",
+    "title" : "Interiorismo Nazari: Reviviendo Espacios con IA",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 22,
+    "slug" : "ishiwall-arte-ropa-y-voluntad-creativa",
+    "title" : "Ishiwall: Diseño, Arte y Cultura Japonesa",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 23,
+    "slug" : "la-banda-sonora-de-priscilla-de-sofia-coppola-un-romance-sin-elvis",
+    "title" : "La Banda Sonora de Priscilla de Sofia Coppola: un romance sin Elvis.",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 24,
+    "slug" : "la-cruz-en-las-montanas-de-caspar-david-friedrich-un-altar-de-naturaleza-y-espiritualidad",
+    "title" : "La Cruz en las Montañas de Caspar David Friedrich: un altar de naturaleza y espiritualidad",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 25,
+    "slug" : "la-guitarra-flamenca-de-yerai-cortes-emocion-pura-en-seis-cuerdas",
+    "title" : "La Guitarra Flamenca de Yerai Cortés: Emoción Pura en Seis Cuerdas",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 26,
+    "slug" : "la-hermanastra-fea-2025-entre-bisturis-belleza-y-la-tragedia-de-no-aceptarse",
+    "title" : "La hermanastra fea (2025): entre bisturís, belleza y la tragedia de no aceptarse",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 27,
+    "slug" : "la-isla-de-los-muertos-arnold-bocklin-1880",
+    "title" : "La Isla de los Muertos – Arnold Böcklin (1880)",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 28,
+    "slug" : "la-masacre-del-batavia-un-relato-de-supervivencia-y-barbarie-en-el-oceano",
+    "title" : "La Masacre del Batavia: Un Relato de Supervivencia y Barbarie en el Océano",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 29,
+    "slug" : "la-momia-2026-una-superproduccion-de-terror-internacional-se-rueda-en-almeria",
+    "title" : "La Momia (2026): una superproducción de terror internacional se rueda en Almería",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 30,
+    "slug" : "la-oscuridad-y-la-melancolia-en-el-arte-de-gustave-dore",
+    "title" : "La Oscuridad y la Melancolía en el Arte de Gustave Doré",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 31,
+    "slug" : "lady-jane-grey-la-tragedia-capturada-por-paul-delaroche",
+    "title" : "Lady Jane Grey: La Tragedia Capturada por Paul Delaroche",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 32,
+    "slug" : "leccion-de-vida-en-la-isla-misteriosa-de-julio-verne",
+    "title" : "Lección de Vida en La Isla Misteriosa de Julio Verne",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 33,
+    "slug" : "los-sin-nombre-miren-ibarguren-brilla-en-el-thriller-de-pau-freixas-que-no-sabias-que-necesitabas-ver",
+    "title" : "Los Sin Nombre: Miren Ibarguren brilla en el thriller de Pau Freixas que no sabías que necesitabas ver",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 34,
+    "slug" : "musical-introduction-ep",
+    "title" : "Musical Introduction EP",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 35,
+    "slug" : "old-kent-road-cronica-de-un-barrio-que-nos-cambio-la-vida",
+    "title" : "Old Kent Road: Crónica de un barrio que nos cambió la vida",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 36,
+    "slug" : "peliculas-vistas-en-agosto-2025",
+    "title" : "Películas vistas en Agosto. 2025",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 44,
+    "slug" : "the-monkey-2025-terror-y-nostalgia-en-el-relato-de-stephen-king",
+    "title" : "The Monkey (2025): Terror y Nostalgia en el Relato de Stephen King",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 37,
+    "slug" : "peliculas-vistas-en-julio-2025",
+    "title" : "Películas vistas en Julio – 2025",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 38,
+    "slug" : "precious-love-deep-essentials",
+    "title" : "Precious Love – Deep Essentials",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 39,
+    "slug" : "quien-es-tribesoul-el-productor-que-redefine-el-sonido-del-amapiano",
+    "title" : "Quién es Tribesoul: El productor que redefine el sonido del Amapiano",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 40,
+    "slug" : "rebirth-by-infinity-musiq-youth-talent-and-the-rise-of-south-africas-amapiano-sound",
+    "title" : "“Rebirth” by Infinity MusiQ: Youth, Talent, and the Rise of South Africa’s Amapiano Sound",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 41,
+    "slug" : "simbolismo-y-narrativa-en-nope-un-analisis",
+    "title" : "Simbolismo y Narrativa en Nope: Un Análisis",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 42,
+    "slug" : "sueno",
+    "title" : "CAPÍTULO 1: SUEÑO",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 43,
+    "slug" : "sug-el-musiq-responde-7-preguntas-sobre-su-arte-y-vision-cultural",
+    "title" : "Sug El MusiQ responde 7 preguntas sobre su arte y visión cultural.",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 45,
+    "slug" : "track-31-jose-l",
+    "title" : "Track 31 – Jose L",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 46,
+    "slug" : "tribesoul-el-rey-del-sgija-en-amapiano",
+    "title" : "Tribesoul: El Rey del Sgija en Amapiano",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 47,
+    "slug" : "trip-from-jose-to-south-africa-7-with-kabza-dzo-729-mdu-infinity-musiq-more",
+    "title" : "Trip from Jose to South Africa 7 with Kabza, Dzo 729, Mdu, Infinity MusiQ & more",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 49,
+    "slug" : "virgen-de-la-macarena-la-nueva-vision-del-cartel-de-semana-santa-2025",
+    "title" : "Virgen de la Macarena: La Nueva Visión del Cartel de Semana Santa 2025",
+    "status" : "draft",
+    "classifications" : [ "necesita revision manual", "no tiene imagen" ],
+    "externalImages" : [ ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 50,
+    "slug" : "vivienda-minimalista-diseno-funcional-y-asequible",
+    "title" : "Vivienda Minimalista: Diseño Funcional y Asequible",
+    "status" : "published",
+    "classifications" : [ "necesita revision manual", "tiene imagenes externas recuperables", "posible problema legal: sourceUrl/credit/rightsNotes vacios" ],
+    "externalImages" : [ "coverMedia.publicUrl=https://pub-7c2a219407dd4d05bf51535d811e7d54.r2.dev/articles/vivienda-minimalista-diseno-funcional-y-asequible/cover.jpg" ],
+    "notes" : [ "contentMarkdown may be plain text" ]
+  }, {
+    "id" : 48,
+    "slug" : "vincent-debe-morir-cuando-el-odio-no-necesita-explicacion",
+    "title" : "VINCENT DEBE MORIR: cuando el odio no necesita explicación",
+    "status" : "published",
+    "classifications" : [ "listo para Markdown", "tiene imagenes externas recuperables", "posible problema legal: sourceUrl/credit/rightsNotes vacios" ],
+    "externalImages" : [ "coverMedia.publicUrl=https://pub-7c2a219407dd4d05bf51535d811e7d54.r2.dev/articles/vicent-debe-morir-cuando-el-odio-no-necesita-explicacion/cover.jpg" ],
+    "notes" : [ ]
+  } ]
+}

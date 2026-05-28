@@ -9,6 +9,13 @@ public record ImportedArticleNormalizeProperties(
         String articleNormalizeAction,
         boolean articleNormalizeApply,
         boolean articleNormalizeClearHtml,
+        Long articleNormalizeArticleId,
+        String articleNormalizeImageRole,
+        String articleNormalizeSourceUrl,
+        String articleNormalizeCredit,
+        String articleNormalizeRightsNotes,
+        String articleNormalizeCaption,
+        String articleNormalizeAltText,
         boolean publishReviewedArticles,
         boolean publishReviewedConfirmed,
         List<Long> reviewedArticleIds

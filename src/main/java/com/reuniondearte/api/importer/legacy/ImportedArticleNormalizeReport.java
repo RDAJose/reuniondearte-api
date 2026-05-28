@@ -12,12 +12,15 @@ record ImportedArticleNormalizeReport(
         int published,
         int readyMarkdown,
         int needsHtmlConversion,
+        int withR2Images,
         int withExternalImages,
         int withoutImage,
+        int r2LegalReviewPending,
         int legalReviewPending,
         int manualReview,
         int converted,
         int imagesImported,
+        int metadataUpdated,
         List<ArticleEntry> articles
 ) {
     record ArticleEntry(
@@ -26,6 +29,7 @@ record ImportedArticleNormalizeReport(
             String title,
             String status,
             List<String> classifications,
+            List<String> r2Images,
             List<String> externalImages,
             List<String> notes
     ) {
