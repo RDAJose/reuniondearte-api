@@ -33,8 +33,13 @@ class ImportedArticleNormalizeRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         String action = properties.action();
-        if (!"report".equals(action) && !"convert".equals(action) && !"images".equals(action) && !"metadata".equals(action)) {
-            throw new IllegalArgumentException("Unsupported --app.articleNormalizeAction. Use report, convert, images or metadata.");
+        if (!"report".equals(action)
+                && !"convert".equals(action)
+                && !"images".equals(action)
+                && !"metadata".equals(action)
+                && !"plain-text-report".equals(action)
+                && !"plain-text-convert".equals(action)) {
+            throw new IllegalArgumentException("Unsupported --app.articleNormalizeAction. Use report, convert, images, metadata, plain-text-report or plain-text-convert.");
         }
         if ("metadata".equals(action) && properties.articleNormalizeArticleId() == null) {
             throw new IllegalArgumentException("Metadata update requires --app.articleNormalizeArticleId");
@@ -45,7 +50,7 @@ class ImportedArticleNormalizeRunner implements ApplicationRunner {
         ImportedArticleNormalizeReport report = normalizer.run(action, apply, properties.articleNormalizeClearHtml());
         ImportedArticleNormalizeReportWriter.WrittenReport written = reportWriter.write(report);
 
-        log.info("Imported article normalization finished. total={} draft={} review={} published={} readyMarkdown={} needsHtmlConversion={} r2Images={} externalImages={} withoutImage={} r2LegalReviewPending={} legalReviewPending={} manualReview={} converted={} imagesImported={} metadataUpdated={} json={} summary={}",
+        log.info("Imported article normalization finished. total={} draft={} review={} published={} readyMarkdown={} needsHtmlConversion={} r2Images={} externalImages={} withoutImage={} r2LegalReviewPending={} legalReviewPending={} manualReview={} converted={} plainTextConvertible={} plainTextManualReview={} plainTextTooShort={} plainTextPersonalOrNonEditorial={} plainTextConverted={} imagesImported={} metadataUpdated={} json={} summary={}",
                 report.total(),
                 report.draft(),
                 report.review(),
@@ -59,6 +64,11 @@ class ImportedArticleNormalizeRunner implements ApplicationRunner {
                 report.legalReviewPending(),
                 report.manualReview(),
                 report.converted(),
+                report.plainTextConvertible(),
+                report.plainTextManualReview(),
+                report.plainTextTooShort(),
+                report.plainTextPersonalOrNonEditorial(),
+                report.plainTextConverted(),
                 report.imagesImported(),
                 report.metadataUpdated(),
                 written.json(),

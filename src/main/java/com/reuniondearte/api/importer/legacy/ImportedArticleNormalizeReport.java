@@ -19,6 +19,11 @@ record ImportedArticleNormalizeReport(
         int legalReviewPending,
         int manualReview,
         int converted,
+        int plainTextConvertible,
+        int plainTextManualReview,
+        int plainTextTooShort,
+        int plainTextPersonalOrNonEditorial,
+        int plainTextConverted,
         int imagesImported,
         int metadataUpdated,
         List<ArticleEntry> articles
@@ -31,6 +36,7 @@ record ImportedArticleNormalizeReport(
             List<String> classifications,
             List<String> r2Images,
             List<String> externalImages,
+            String proposedMarkdown,
             List<String> notes
     ) {
     }

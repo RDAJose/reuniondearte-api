@@ -42,6 +42,11 @@ class ImportedArticleNormalizeReportWriter {
         text.append("- legal review pending: ").append(report.legalReviewPending()).append("\n");
         text.append("- manual review: ").append(report.manualReview()).append("\n");
         text.append("- converted: ").append(report.converted()).append("\n");
+        text.append("- plain text convertible: ").append(report.plainTextConvertible()).append("\n");
+        text.append("- plain text manual review: ").append(report.plainTextManualReview()).append("\n");
+        text.append("- plain text too short: ").append(report.plainTextTooShort()).append("\n");
+        text.append("- plain text personal/non editorial: ").append(report.plainTextPersonalOrNonEditorial()).append("\n");
+        text.append("- plain text converted: ").append(report.plainTextConverted()).append("\n");
         text.append("- images imported: ").append(report.imagesImported()).append("\n\n");
         text.append("- metadata updated: ").append(report.metadataUpdated()).append("\n\n");
         for (ImportedArticleNormalizeReport.ArticleEntry article : report.articles()) {
@@ -54,6 +59,11 @@ class ImportedArticleNormalizeReportWriter {
             }
             if (!article.externalImages().isEmpty()) {
                 text.append("- external images: ").append(String.join(", ", article.externalImages())).append("\n");
+            }
+            if (article.proposedMarkdown() != null && !article.proposedMarkdown().isBlank()) {
+                text.append("- proposed Markdown:\n\n```markdown\n")
+                        .append(article.proposedMarkdown().trim())
+                        .append("\n```\n");
             }
             if (!article.notes().isEmpty()) {
                 text.append("- notes: ").append(String.join("; ", article.notes())).append("\n");

@@ -34,6 +34,9 @@ class ImportedArticleNormalizer {
     private static final Pattern MARKDOWN_IMAGE = Pattern.compile("!\\[([^]]*)]\\((https?://[^)\\s]+)\\)", Pattern.CASE_INSENSITIVE);
     private static final Pattern HTML_LIKE = Pattern.compile("<\\s*/?\\s*(p|div|h[1-6]|ul|ol|li|blockquote|img|a|strong|em|br)\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern MARKDOWN_SIGNAL = Pattern.compile("(^|\\n)\\s*(#{1,6}\\s|[-*]\\s|\\d+\\.\\s|>\\s)|\\[[^]]+]\\([^)]+\\)|!\\[[^]]*]\\([^)]+\\)|\\*\\*[^*]+\\*\\*", Pattern.MULTILINE);
+    private static final Pattern PLAIN_LIST_SIGNAL = Pattern.compile("^\\s*(?:[-*•]\\s+|\\d+[.)]\\s+)", Pattern.MULTILINE);
+    private static final Pattern TECHNICAL_FIELD = Pattern.compile("(?i)^\\s*(titulo|título|autor|artista|fecha|ano|año|lugar|sede|tecnica|técnica|materiales|medidas|dimensiones|duracion|duración|comisariado|curaduria|curaduría|editorial|isbn)\\s*[:.-]\\s*\\S+");
+    private static final Pattern PERSONAL_OR_NON_EDITORIAL = Pattern.compile("(?i)\\b(curriculum vitae|currículum vitae|\\bcv\\b|biografia|biografía|bio\\b|semblanza|trayectoria|formacion|formación|experiencia profesional|exposiciones individuales|exposiciones colectivas|premios y becas|nacido en|nacida en|estudios en)\\b");
     private static final List<String> LEGACY_IMAGE_COLUMNS = List.of(
             "cover_image", "cover_image_url", "featured_image_url", "image_url", "legacy_image_url", "thumbnail_url"
     );
@@ -77,6 +80,7 @@ class ImportedArticleNormalizer {
         int converted = 0;
         int imported = 0;
         int metadataUpdated = 0;
+        int plainTextConverted = 0;
 
         for (Article article : allArticles) {
             Analysis analysis = analyze(article, legacyImages.getOrDefault(article.getId(), Map.of()), ownMediaPublicUrls);
@@ -112,10 +116,26 @@ class ImportedArticleNormalizer {
                 }
                 analysis.notes().add(apply ? "existing image metadata updated" : "dry-run: existing image metadata would be updated");
             }
+            if (("plain-text-report".equals(action) || "plain-text-convert".equals(action)) && analysis.plainText() != null) {
+                PlainTextAssessment plainText = analysis.plainText();
+                analysis.notes().addAll(plainText.notes());
+                if ("plain-text-convert".equals(action) && plainText.autoConvertible()) {
+                    if (apply) {
+                        revisions.save(ArticleRevision.importedArticleBackup(article, "Backup before plain text to Markdown editorial conversion"));
+                        article.normalizeImportedContent(plainText.proposedMarkdown(), false);
+                        article.moveToDraft();
+                        articles.save(article);
+                        plainTextConverted++;
+                        analysis.notes().add("plain text converted to editorial Markdown; article kept as draft");
+                    } else {
+                        analysis.notes().add("dry-run: plain text would be converted to Markdown and kept as draft");
+                    }
+                }
+            }
             entries.add(entry(article, analysis));
         }
 
-        return report(action, apply, allArticles, entries, converted, imported, metadataUpdated);
+        return report(action, apply, allArticles, entries, converted, imported, metadataUpdated, plainTextConverted);
     }
 
     private Analysis analyze(Article article, Map<String, String> legacyImageFields, Set<String> ownMediaPublicUrls) {
@@ -143,7 +163,19 @@ class ImportedArticleNormalizer {
         }
         if (markdownLooksPlain) {
             notes.add("contentMarkdown may be plain text");
-            classes.add("necesita revision manual");
+        }
+        PlainTextAssessment plainText = markdownLooksPlain ? assessPlainText(article, markdown) : null;
+        if (plainText != null) {
+            classes.add(plainText.autoConvertible() ? "texto plano convertible automaticamente" : "texto plano necesita revision manual");
+            if (!plainText.autoConvertible()) {
+                classes.add("necesita revision manual");
+            }
+            if (plainText.tooShort()) {
+                classes.add("texto plano demasiado corto o no publicable");
+            }
+            if (plainText.personalOrNonEditorial()) {
+                classes.add("texto personal/no editorial posible");
+            }
         }
 
         List<ImportedArticleImageReference> r2Images = new ArrayList<>();
@@ -166,7 +198,7 @@ class ImportedArticleNormalizer {
         if (needsHtmlConversion && isBlank(html) && markdownLooksHtml) {
             classes.add("necesita revision manual");
         }
-        return new Analysis(classes, notes, r2Images, externalImages, needsHtmlConversion);
+        return new Analysis(classes, notes, r2Images, externalImages, needsHtmlConversion, plainText);
     }
 
     private List<ImportedArticleImageReference> categorizedImages(
@@ -375,6 +407,175 @@ class ImportedArticleNormalizer {
         return externalImages.stream().anyMatch(image -> isBlank(image.credit()));
     }
 
+    private PlainTextAssessment assessPlainText(Article article, String text) {
+        List<String> paragraphs = paragraphs(text);
+        List<String> lines = meaningfulLines(text);
+        int wordCount = wordCount(text);
+        boolean hasParagraphs = paragraphs.size() > 1;
+        boolean hasPossibleTitles = possibleTitleLines(lines) > 0;
+        boolean hasPossibleLists = PLAIN_LIST_SIGNAL.matcher(text).find();
+        boolean hasTechnicalSheet = technicalFieldCount(lines) >= 2;
+        boolean hasSeparableBlocks = hasParagraphs || lines.size() >= 5 || hasTechnicalSheet;
+        boolean tooShort = wordCount < 80;
+        boolean personalOrNonEditorial = PERSONAL_OR_NON_EDITORIAL.matcher(article.getTitle() + "\n" + text).find();
+        boolean autoConvertible = !tooShort
+                && !personalOrNonEditorial
+                && (hasParagraphs || hasPossibleTitles || hasPossibleLists || hasTechnicalSheet || hasSeparableBlocks);
+
+        List<String> notes = new ArrayList<>();
+        notes.add("plain text word count=" + wordCount);
+        if (hasParagraphs) {
+            notes.add("plain text has paragraphs");
+        }
+        if (hasPossibleTitles) {
+            notes.add("plain text has possible headings");
+        }
+        if (hasPossibleLists) {
+            notes.add("plain text has possible lists");
+        }
+        if (hasTechnicalSheet) {
+            notes.add("plain text has possible technical sheet");
+        }
+        if (hasSeparableBlocks) {
+            notes.add("plain text has separable blocks");
+        }
+        if (tooShort) {
+            notes.add("plain text is too short or not publishable");
+        }
+        if (personalOrNonEditorial) {
+            notes.add("plain text may be personal/non editorial content");
+        }
+
+        String proposedMarkdown = autoConvertible ? plainTextToMarkdown(article, lines) : "";
+        return new PlainTextAssessment(
+                autoConvertible,
+                tooShort,
+                personalOrNonEditorial,
+                hasParagraphs,
+                hasPossibleTitles,
+                hasPossibleLists,
+                hasTechnicalSheet,
+                hasSeparableBlocks,
+                proposedMarkdown,
+                notes
+        );
+    }
+
+    private String plainTextToMarkdown(Article article, List<String> lines) {
+        StringBuilder markdown = new StringBuilder();
+        boolean inList = false;
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).trim();
+            if (line.isBlank()) {
+                if (inList) {
+                    markdown.append("\n");
+                    inList = false;
+                }
+                continue;
+            }
+
+            Matcher technicalMatcher = TECHNICAL_FIELD.matcher(line);
+            if (technicalMatcher.find()) {
+                if (inList) {
+                    markdown.append("\n");
+                    inList = false;
+                }
+                markdown.append("- **")
+                        .append(capitalizeLabel(technicalMatcher.group(1)))
+                        .append(":** ")
+                        .append(line.substring(technicalMatcher.end(1)).replaceFirst("^\\s*[:.-]\\s*", ""))
+                        .append("\n");
+                continue;
+            }
+
+            Matcher listMatcher = PLAIN_LIST_SIGNAL.matcher(line);
+            if (listMatcher.find()) {
+                markdown.append("- ").append(line.substring(listMatcher.end()).trim()).append("\n");
+                inList = true;
+                continue;
+            }
+
+            if (inList) {
+                markdown.append("\n");
+                inList = false;
+            }
+            if (looksLikeHeading(line, i, lines, article)) {
+                markdown.append("## ").append(line).append("\n\n");
+            } else {
+                markdown.append(line).append("\n\n");
+            }
+        }
+        return markdown.toString().replaceAll("\\n{3,}", "\n\n").trim() + "\n";
+    }
+
+    private List<String> paragraphs(String text) {
+        return List.of(text.trim().split("\\R\\s*\\R")).stream()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toList();
+    }
+
+    private List<String> meaningfulLines(String text) {
+        return text.lines()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toList();
+    }
+
+    private int possibleTitleLines(List<String> lines) {
+        int count = 0;
+        for (int i = 0; i < lines.size(); i++) {
+            if (looksLikeHeading(lines.get(i), i, lines, null)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean looksLikeHeading(String line, int index, List<String> lines, Article article) {
+        String trimmed = line.trim();
+        if (trimmed.length() < 4 || trimmed.length() > 90) {
+            return false;
+        }
+        if (article != null && trimmed.equalsIgnoreCase(article.getTitle())) {
+            return false;
+        }
+        if (trimmed.endsWith(".") || trimmed.endsWith(",") || trimmed.endsWith(";") || trimmed.endsWith(":")) {
+            return false;
+        }
+        if (TECHNICAL_FIELD.matcher(trimmed).find() || PLAIN_LIST_SIGNAL.matcher(trimmed).find()) {
+            return false;
+        }
+        boolean followedByLongerText = index + 1 < lines.size() && lines.get(index + 1).length() > trimmed.length() + 20;
+        boolean titleCaseish = Character.isUpperCase(trimmed.codePointAt(0));
+        return titleCaseish && followedByLongerText;
+    }
+
+    private int technicalFieldCount(List<String> lines) {
+        int count = 0;
+        for (String line : lines) {
+            if (TECHNICAL_FIELD.matcher(line).find()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int wordCount(String text) {
+        if (isBlank(text)) {
+            return 0;
+        }
+        return text.trim().split("\\s+").length;
+    }
+
+    private String capitalizeLabel(String value) {
+        if (isBlank(value)) {
+            return "";
+        }
+        String trimmed = value.trim().toLowerCase(Locale.ROOT);
+        return trimmed.substring(0, 1).toUpperCase(Locale.ROOT) + trimmed.substring(1);
+    }
+
     private ImportedArticleNormalizeReport report(
             String action,
             boolean apply,
@@ -382,7 +583,8 @@ class ImportedArticleNormalizer {
             List<ImportedArticleNormalizeReport.ArticleEntry> entries,
             int converted,
             int imported,
-            int metadataUpdated
+            int metadataUpdated,
+            int plainTextConverted
     ) {
         return new ImportedArticleNormalizeReport(
                 OffsetDateTime.now().toString(),
@@ -401,6 +603,11 @@ class ImportedArticleNormalizer {
                 count(entries, "imagen con metadatos legales incompletos"),
                 count(entries, "necesita revision manual"),
                 converted,
+                count(entries, "texto plano convertible automaticamente"),
+                count(entries, "texto plano necesita revision manual"),
+                count(entries, "texto plano demasiado corto o no publicable"),
+                count(entries, "texto personal/no editorial posible"),
+                plainTextConverted,
                 imported,
                 metadataUpdated,
                 entries
@@ -416,6 +623,7 @@ class ImportedArticleNormalizer {
                 analysis.classifications(),
                 analysis.r2Images().stream().map(image -> image.field() + "=" + image.url()).toList(),
                 analysis.externalImages().stream().map(image -> image.field() + "=" + image.url()).toList(),
+                analysis.plainText() == null ? "" : analysis.plainText().proposedMarkdown(),
                 analysis.notes()
         );
     }
@@ -518,7 +726,22 @@ class ImportedArticleNormalizer {
             List<String> notes,
             List<ImportedArticleImageReference> r2Images,
             List<ImportedArticleImageReference> externalImages,
-            boolean needsHtmlConversion
+            boolean needsHtmlConversion,
+            PlainTextAssessment plainText
+    ) {
+    }
+
+    private record PlainTextAssessment(
+            boolean autoConvertible,
+            boolean tooShort,
+            boolean personalOrNonEditorial,
+            boolean hasParagraphs,
+            boolean hasPossibleTitles,
+            boolean hasPossibleLists,
+            boolean hasTechnicalSheet,
+            boolean hasSeparableBlocks,
+            String proposedMarkdown,
+            List<String> notes
     ) {
     }
 
