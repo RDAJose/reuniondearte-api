@@ -13,7 +13,7 @@ rda:
   backup-root: ${RDA_BACKUP_ROOT:./storage/backups/postgres}
   import-log-root: ${RDA_IMPORT_LOG_ROOT:./storage/import-logs}
   public-base-url: ${RDA_PUBLIC_BASE_URL:http://localhost:8080}
-  allowed-origins: ${RDA_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+  allowed-origins: ${RDA_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://reuniondearte.com}
   s3-endpoint: ${RDA_S3_ENDPOINT:}
   s3-region: ${RDA_S3_REGION:auto}
   s3-bucket: ${RDA_S3_BUCKET:}

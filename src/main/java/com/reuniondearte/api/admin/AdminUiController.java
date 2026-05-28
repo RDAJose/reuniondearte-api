@@ -59,6 +59,13 @@ public class AdminUiController {
                     .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
                     .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
                     .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+                    .comment-panel { margin-bottom: 18px; }
+                    .comment-list { display: grid; gap: 10px; }
+                    .comment-card { border: 1px solid var(--line); background: #fff; padding: 12px; }
+                    .comment-card header { position: static; border: 0; padding: 0; background: transparent; }
+                    .comment-card strong { display: block; font-size: 14px; }
+                    .comment-card small { display: block; margin-top: 3px; color: var(--muted); }
+                    .comment-card p { white-space: pre-wrap; line-height: 1.45; margin: 10px 0; }
                     .empty { color: var(--muted); padding: 20px 0; }
                     @media (max-width: 880px) {
                       main { grid-template-columns: 1fr; }
@@ -83,6 +90,13 @@ public class AdminUiController {
                     </aside>
                     <section>
                       <p id="message" class="message">Selecciona un articulo.</p>
+                      <div class="panel comment-panel">
+                        <div class="toolbar">
+                          <h2 style="margin:0; font-size:16px; flex:1;">Comentarios pendientes</h2>
+                          <button type="button" id="refreshCommentsButton" class="secondary">Recargar</button>
+                        </div>
+                        <div id="pendingComments" class="comment-list"></div>
+                      </div>
                       <div id="editor" class="grid" hidden>
                         <form id="articleForm" class="panel">
                           <h2 id="editorTitle">Articulo</h2>
@@ -194,9 +208,10 @@ public class AdminUiController {
                     </section>
                   </main>
                   <script>
-                    const state = { status: "draft", articles: [], current: null, categories: [] };
+                    const state = { status: "draft", articles: [], current: null, categories: [], comments: [] };
                     const list = document.getElementById("articleList");
                     const message = document.getElementById("message");
+                    const pendingComments = document.getElementById("pendingComments");
                     const editor = document.getElementById("editor");
                     const articleForm = document.getElementById("articleForm");
                     const coverForm = document.getElementById("coverForm");
@@ -215,6 +230,7 @@ public class AdminUiController {
                     });
 
                     document.getElementById("refreshButton").addEventListener("click", loadArticles);
+                    document.getElementById("refreshCommentsButton").addEventListener("click", loadPendingComments);
                     document.getElementById("publishButton").addEventListener("click", () => changeStatus("publish"));
                     document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
                     document.getElementById("deleteArticleButton").addEventListener("click", deleteArticle);
@@ -260,6 +276,57 @@ public class AdminUiController {
                         setMessage(state.articles.length ? "Selecciona un articulo." : "No hay articulos en este estado.");
                       } catch (error) {
                         setMessage(`Error cargando articulos: ${error.message}`);
+                      }
+                    }
+
+                    async function loadPendingComments() {
+                      pendingComments.innerHTML = `<p class="empty">Cargando comentarios...</p>`;
+                      try {
+                        state.comments = await api("/api/admin/comments?status=PENDING");
+                        renderPendingComments();
+                      } catch (error) {
+                        pendingComments.innerHTML = `<p class="empty">Error cargando comentarios: ${escapeHtml(error.message)}</p>`;
+                      }
+                    }
+
+                    function renderPendingComments() {
+                      pendingComments.innerHTML = state.comments.length
+                        ? state.comments.map((comment) => `
+                            <article class="comment-card" data-comment-id="${comment.id}">
+                              <header>
+                                <strong>${escapeHtml(comment.publicName || "(sin nombre)")}</strong>
+                                <small>${escapeHtml(comment.article || "")} - ${escapeHtml(comment.slug || "")} - ${formatDate(comment.createdAt)}</small>
+                              </header>
+                              <p>${escapeHtml(comment.body || "")}</p>
+                              <div class="toolbar" style="margin-bottom:0;">
+                                <button type="button" data-comment-action="approve">Aprobar</button>
+                                <button type="button" class="secondary" data-comment-action="reject">Rechazar</button>
+                                <button type="button" class="danger" data-comment-action="delete">Eliminar</button>
+                              </div>
+                            </article>
+                          `).join("")
+                        : `<p class="empty">No hay comentarios pendientes.</p>`;
+                      pendingComments.querySelectorAll("[data-comment-action]").forEach((button) => {
+                        button.addEventListener("click", () => moderateComment(button));
+                      });
+                    }
+
+                    async function moderateComment(button) {
+                      const card = button.closest("[data-comment-id]");
+                      const id = card.dataset.commentId;
+                      const action = button.dataset.commentAction;
+                      if (action === "delete" && !confirm("Eliminar este comentario pendiente de forma definitiva. Continuar?")) {
+                        return;
+                      }
+                      setMessage(`Moderando comentario #${id}...`);
+                      try {
+                        const method = action === "delete" ? "DELETE" : "PATCH";
+                        const path = action === "delete" ? `/api/admin/comments/${id}` : `/api/admin/comments/${id}/${action}`;
+                        await api(path, { method });
+                        await loadPendingComments();
+                        setMessage("Comentario actualizado.");
+                      } catch (error) {
+                        setMessage(`Error moderando comentario: ${error.message}`);
                       }
                     }
 
@@ -646,6 +713,10 @@ public class AdminUiController {
                       return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
                     }
 
+                    function formatDate(value) {
+                      return value ? new Date(value).toLocaleString("es-ES") : "-";
+                    }
+
                     function imageSizeLabel(image) {
                       return image && (image.width || image.height) ? ` - ${image.width || "?"}x${image.height || "?"} px` : "";
                     }
@@ -673,6 +744,7 @@ public class AdminUiController {
 
                     loadCategories()
                       .then(loadArticles)
+                      .then(loadPendingComments)
                       .catch((error) => setMessage(`Error inicializando admin: ${error.message}`));
                   </script>
                 </body>
