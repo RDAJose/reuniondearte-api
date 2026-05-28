@@ -73,6 +73,14 @@ public class MediaAsset {
         return credit;
     }
 
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public String getRightsNotes() {
+        return rightsNotes;
+    }
+
     public String getStoragePath() {
         return storagePath;
     }
@@ -166,5 +174,14 @@ public class MediaAsset {
             this.createdAt = now;
         }
         this.updatedAt = now;
+    }
+
+    public void updateEditorialMetadata(String altText, String caption, String credit, String sourceUrl, String rightsNotes) {
+        this.altText = altText;
+        this.caption = caption;
+        this.credit = credit;
+        this.sourceUrl = sourceUrl;
+        this.rightsNotes = rightsNotes;
+        this.updatedAt = OffsetDateTime.now();
     }
 }

@@ -29,5 +29,34 @@ public class ArticleMedia {
     private String role;
     private Integer sortOrder;
     private OffsetDateTime createdAt;
-}
 
+    public Long getId() {
+        return id;
+    }
+
+    public Article getArticle() {
+        return article;
+    }
+
+    public MediaAsset getMediaAsset() {
+        return mediaAsset;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public static ArticleMedia create(Article article, MediaAsset mediaAsset, String role, Integer sortOrder) {
+        ArticleMedia articleMedia = new ArticleMedia();
+        articleMedia.article = article;
+        articleMedia.mediaAsset = mediaAsset;
+        articleMedia.role = role;
+        articleMedia.sortOrder = sortOrder == null ? 0 : sortOrder;
+        articleMedia.createdAt = OffsetDateTime.now();
+        return articleMedia;
+    }
+}

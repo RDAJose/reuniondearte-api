@@ -5,6 +5,7 @@ import com.reuniondearte.api.article.Article;
 import com.reuniondearte.api.seo.SeoMetadata;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record AdminArticleResponse(
         Long id,
@@ -18,9 +19,15 @@ public record AdminArticleResponse(
         @JsonProperty("canonical_url") String canonicalUrl,
         @JsonProperty("meta_title") String metaTitle,
         @JsonProperty("meta_description") String metaDescription,
-        Boolean noindex
+        Boolean noindex,
+        AdminArticleCoverResponse cover,
+        List<AdminArticleMediaResponse> bodyImages
 ) {
     public static AdminArticleResponse from(Article article, SeoMetadata seo) {
+        return from(article, seo, List.of());
+    }
+
+    public static AdminArticleResponse from(Article article, SeoMetadata seo, List<AdminArticleMediaResponse> bodyImages) {
         return new AdminArticleResponse(
                 article.getId(),
                 article.getTitle(),
@@ -33,7 +40,9 @@ public record AdminArticleResponse(
                 article.getCanonicalUrl(),
                 seo == null ? null : seo.getMetaTitle(),
                 seo == null ? null : seo.getMetaDescription(),
-                seo != null && Boolean.TRUE.equals(seo.getNoindex())
+                seo != null && Boolean.TRUE.equals(seo.getNoindex()),
+                article.getCoverMedia() == null ? null : AdminArticleCoverResponse.from(article, article.getCoverMedia()),
+                bodyImages
         );
     }
 }

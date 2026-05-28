@@ -47,6 +47,17 @@ public class AdminUiController {
                     .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
                     .message { min-height: 24px; margin: 8px 0 12px; color: var(--muted); font-size: 14px; }
                     .public-link { word-break: break-all; color: #1d4ed8; font-size: 14px; }
+                    .image-status { display: inline-flex; margin: 4px 0 12px; border: 1px solid var(--line); background: var(--soft); padding: 6px 8px; font-size: 13px; font-weight: 700; }
+                    .image-status.assigned { border-color: #166534; color: #166534; background: #f0fdf4; }
+                    .image-preview { width: 100%; max-height: 220px; object-fit: cover; border: 1px solid var(--line); background: var(--soft); }
+                    .data-list { display: grid; gap: 8px; margin: 8px 0 14px; font-size: 13px; }
+                    .data-list div { display: grid; gap: 3px; }
+                    .data-list dt { color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
+                    .data-list dd { margin: 0; word-break: break-word; }
+                    .notice { border-left: 3px solid #92400e; background: #fffbeb; color: #713f12; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+                    .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+                    .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+                    .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
                     .empty { color: var(--muted); padding: 20px 0; }
                     @media (max-width: 880px) {
                       main { grid-template-columns: 1fr; }
@@ -119,9 +130,9 @@ public class AdminUiController {
                         </form>
                         <div class="panel">
                           <h3>Imagen principal</h3>
-                          <form id="coverForm">
-                            <label for="coverFile">File</label>
-                            <input id="coverFile" name="file" type="file" accept="image/jpeg,image/png,image/webp">
+                          <div id="coverStatus" class="image-status">Sin imagen principal</div>
+                          <div id="currentCover"></div>
+                          <form id="coverMetadataForm">
                             <label for="altText">Alt text obligatorio</label>
                             <input id="altText" name="altText" required>
                             <label for="caption">Caption</label>
@@ -132,10 +143,46 @@ public class AdminUiController {
                             <input id="sourceUrl" name="sourceUrl">
                             <label for="rightsNotes">Rights notes</label>
                             <textarea id="rightsNotes" name="rightsNotes"></textarea>
+                            <p class="hint">Recomendacion cover: maximo 1600px de ancho, preferente webp, intenta quedar por debajo de 400 KB cuando sea viable.</p>
+                            <div class="toolbar" style="margin-top: 14px;">
+                              <button type="submit" class="secondary">Guardar datos de imagen</button>
+                            </div>
+                          </form>
+                          <form id="coverForm">
+                            <label for="coverFile">File</label>
+                            <input id="coverFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+                            <p id="coverFileHint" class="hint"></p>
                             <div class="toolbar" style="margin-top: 14px;">
                               <button type="submit">Subir cover</button>
                             </div>
                           </form>
+                          <h3 style="margin-top: 18px;">Importar imagen desde URL</h3>
+                          <p class="notice">Importar una imagen no confirma que tengas derechos. Usa solo imagenes propias, autorizadas, de press kit permitido, dominio publico o licencia compatible.</p>
+                          <form id="coverImportForm">
+                            <label for="coverImportUrl">URL de imagen</label>
+                            <input id="coverImportUrl" name="imageUrl" type="url" placeholder="https://...">
+                            <div class="toolbar" style="margin-top: 14px;">
+                              <button type="submit">Importar cover</button>
+                            </div>
+                          </form>
+                          <h3 style="margin-top: 18px;">Imagenes del cuerpo</h3>
+                          <p class="hint">Recomendacion cuerpo: maximo 1200px de ancho, preferente webp. Despues de subir o importar, pega el snippet Markdown en Content markdown.</p>
+                          <form id="bodyImageForm">
+                            <label for="bodyImageFile">File</label>
+                            <input id="bodyImageFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+                            <p id="bodyFileHint" class="hint"></p>
+                            <div class="toolbar" style="margin-top: 14px;">
+                              <button type="submit">Subir imagen de cuerpo</button>
+                            </div>
+                          </form>
+                          <form id="bodyImportForm">
+                            <label for="bodyImportUrl">Importar imagen de cuerpo desde URL</label>
+                            <input id="bodyImportUrl" name="imageUrl" type="url" placeholder="https://...">
+                            <div class="toolbar" style="margin-top: 14px;">
+                              <button type="submit">Importar imagen de cuerpo</button>
+                            </div>
+                          </form>
+                          <div id="bodyImages"></div>
                           <h3 style="margin-top: 18px;">API publica</h3>
                           <a id="publicApiLink" class="public-link" href="#" target="_blank" rel="noreferrer"></a>
                         </div>
@@ -149,6 +196,10 @@ public class AdminUiController {
                     const editor = document.getElementById("editor");
                     const articleForm = document.getElementById("articleForm");
                     const coverForm = document.getElementById("coverForm");
+                    const coverMetadataForm = document.getElementById("coverMetadataForm");
+                    const coverImportForm = document.getElementById("coverImportForm");
+                    const bodyImageForm = document.getElementById("bodyImageForm");
+                    const bodyImportForm = document.getElementById("bodyImportForm");
                     const categorySelect = document.getElementById("category");
 
                     document.querySelectorAll("[data-status]").forEach((button) => {
@@ -164,6 +215,12 @@ public class AdminUiController {
                     document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
                     articleForm.addEventListener("submit", saveArticle);
                     coverForm.addEventListener("submit", uploadCover);
+                    coverMetadataForm.addEventListener("submit", saveCoverMetadata);
+                    coverImportForm.addEventListener("submit", importCover);
+                    bodyImageForm.addEventListener("submit", uploadBodyImage);
+                    bodyImportForm.addEventListener("submit", importBodyImage);
+                    document.getElementById("coverFile").addEventListener("change", (event) => showFileHint(event, "coverFileHint"));
+                    document.getElementById("bodyImageFile").addEventListener("change", (event) => showFileHint(event, "bodyFileHint"));
 
                     async function api(path, options = {}) {
                       const response = await fetch(path, {
@@ -244,6 +301,78 @@ public class AdminUiController {
                       const publicLink = document.getElementById("publicApiLink");
                       publicLink.href = publicPath;
                       publicLink.textContent = `${window.location.origin}${publicPath}`;
+                      fillImageMetadata(article.cover);
+                      renderCurrentCover(article.cover);
+                      renderBodyImages(article.bodyImages || []);
+                    }
+
+                    function fillImageMetadata(cover) {
+                      document.getElementById("altText").value = cover?.coverAlt || "";
+                      document.getElementById("caption").value = cover?.coverCaption || "";
+                      document.getElementById("credit").value = cover?.coverCredit || "";
+                      document.getElementById("sourceUrl").value = cover?.sourceUrl || "";
+                      document.getElementById("rightsNotes").value = cover?.rightsNotes || "";
+                      document.getElementById("coverFile").value = "";
+                      document.getElementById("coverImportUrl").value = "";
+                      document.getElementById("coverFileHint").textContent = "";
+                      document.getElementById("bodyImageFile").value = "";
+                      document.getElementById("bodyImportUrl").value = "";
+                      document.getElementById("bodyFileHint").textContent = "";
+                    }
+
+                    function renderCurrentCover(cover) {
+                      const status = document.getElementById("coverStatus");
+                      const container = document.getElementById("currentCover");
+                      status.textContent = cover ? "Imagen principal asignada" : "Sin imagen principal";
+                      status.classList.toggle("assigned", Boolean(cover));
+                      if (!cover) {
+                        container.innerHTML = `<p class="empty">Este articulo todavia no tiene imagen principal. Puedes subir una nueva o importarla desde URL.</p>`;
+                        return;
+                      }
+                      container.innerHTML = `
+                        <img class="image-preview" src="${escapeAttribute(cover.coverImage)}" alt="${escapeAttribute(cover.coverAlt || "")}">
+                        <dl class="data-list">
+                          <div><dt>URL publica</dt><dd><a class="public-link" href="${escapeAttribute(cover.coverImage)}" target="_blank" rel="noreferrer">${escapeHtml(cover.coverImage)}</a></dd></div>
+                          <div><dt>Alt text</dt><dd>${escapeHtml(cover.coverAlt || "-")}</dd></div>
+                          <div><dt>Caption</dt><dd>${escapeHtml(cover.coverCaption || "-")}</dd></div>
+                          <div><dt>Credit</dt><dd>${escapeHtml(cover.coverCredit || "-")}</dd></div>
+                          <div><dt>Source URL</dt><dd>${linkOrDash(cover.sourceUrl)}</dd></div>
+                          <div><dt>Rights notes</dt><dd>${escapeHtml(cover.rightsNotes || "-")}</dd></div>
+                          <div><dt>Peso</dt><dd>${formatBytes(cover.size_bytes)}${imageSizeLabel(cover)}</dd></div>
+                        </dl>
+                      `;
+                    }
+
+                    function renderBodyImages(images) {
+                      const container = document.getElementById("bodyImages");
+                      if (!images.length) {
+                        container.innerHTML = `<p class="empty">Sin imagenes del cuerpo asociadas.</p>`;
+                        return;
+                      }
+                      container.innerHTML = images.map((image, index) => `
+                        <div class="body-image">
+                          <img class="image-preview" src="${escapeAttribute(image.publicUrl)}" alt="${escapeAttribute(image.altText || "")}">
+                          <dl class="data-list">
+                            <div><dt>Imagen ${index + 1}</dt><dd><a class="public-link" href="${escapeAttribute(image.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(image.publicUrl)}</a></dd></div>
+                            <div><dt>Alt text</dt><dd>${escapeHtml(image.altText || "-")}</dd></div>
+                            <div><dt>Caption</dt><dd>${escapeHtml(image.caption || "-")}</dd></div>
+                            <div><dt>Credit</dt><dd>${escapeHtml(image.credit || "-")}</dd></div>
+                            <div><dt>Source URL</dt><dd>${linkOrDash(image.sourceUrl)}</dd></div>
+                            <div><dt>Rights notes</dt><dd>${escapeHtml(image.rightsNotes || "-")}</dd></div>
+                            <div><dt>Peso</dt><dd>${formatBytes(image.size_bytes)}${imageSizeLabel(image)}</dd></div>
+                          </dl>
+                          <label for="snippet-${image.mediaAssetId}">Snippet Markdown</label>
+                          <textarea id="snippet-${image.mediaAssetId}" class="snippet" readonly>${escapeHtml(image.markdownSnippet || "")}</textarea>
+                          <div class="toolbar"><button type="button" class="secondary" data-copy="${image.mediaAssetId}">Copiar snippet</button></div>
+                        </div>
+                      `).join("");
+                      container.querySelectorAll("[data-copy]").forEach((button) => {
+                        button.addEventListener("click", async () => {
+                          const textarea = document.getElementById(`snippet-${button.dataset.copy}`);
+                          await navigator.clipboard.writeText(textarea.value);
+                          setMessage("Snippet Markdown copiado.");
+                        });
+                      });
                     }
 
                     async function saveArticle(event) {
@@ -294,26 +423,129 @@ public class AdminUiController {
                       event.preventDefault();
                       if (!state.current) return;
                       const file = document.getElementById("coverFile").files[0];
-                      const altText = document.getElementById("altText").value.trim();
-                      if (!file || !altText) {
+                      const metadata = imageMetadata();
+                      if (!file || !metadata.altText) {
                         setMessage("Selecciona una imagen y escribe altText.");
                         return;
                       }
                       const formData = new FormData();
                       formData.append("file", file);
-                      formData.append("altText", altText);
-                      appendIfPresent(formData, "caption", document.getElementById("caption").value);
-                      appendIfPresent(formData, "credit", document.getElementById("credit").value);
-                      appendIfPresent(formData, "sourceUrl", document.getElementById("sourceUrl").value);
-                      appendIfPresent(formData, "rightsNotes", document.getElementById("rightsNotes").value);
+                      appendMetadata(formData, metadata);
                       setMessage("Subiendo cover...");
                       try {
                         const result = await api(`/api/admin/articles/${state.current.id}/cover`, { method: "POST", body: formData });
                         setMessage(`Cover guardada: ${result.coverImage}`);
-                        coverForm.reset();
+                        await openArticle(state.current.id);
                       } catch (error) {
                         setMessage(`Error subiendo cover: ${error.message}`);
                       }
+                    }
+
+                    async function saveCoverMetadata(event) {
+                      event.preventDefault();
+                      if (!state.current) return;
+                      if (!state.current.cover) {
+                        setMessage("No hay imagen principal para actualizar.");
+                        return;
+                      }
+                      const metadata = imageMetadata();
+                      if (!metadata.altText) {
+                        setMessage("Alt text es obligatorio.");
+                        return;
+                      }
+                      setMessage("Guardando datos de imagen...");
+                      try {
+                        await api(`/api/admin/articles/${state.current.id}/cover/metadata`, { method: "PATCH", body: JSON.stringify(metadata) });
+                        await openArticle(state.current.id);
+                        setMessage("Datos de imagen guardados.");
+                      } catch (error) {
+                        setMessage(`Error guardando datos de imagen: ${error.message}`);
+                      }
+                    }
+
+                    async function importCover(event) {
+                      event.preventDefault();
+                      if (!state.current) return;
+                      const body = importPayload("coverImportUrl");
+                      if (!body) return;
+                      setMessage("Importando cover...");
+                      try {
+                        const result = await api(`/api/admin/articles/${state.current.id}/cover/import`, { method: "POST", body: JSON.stringify(body) });
+                        setMessage(`Cover importada: ${result.coverImage}`);
+                        await openArticle(state.current.id);
+                      } catch (error) {
+                        setMessage(`Error importando cover: ${error.message}`);
+                      }
+                    }
+
+                    async function uploadBodyImage(event) {
+                      event.preventDefault();
+                      if (!state.current) return;
+                      const file = document.getElementById("bodyImageFile").files[0];
+                      const metadata = imageMetadata();
+                      if (!file || !metadata.altText) {
+                        setMessage("Selecciona una imagen de cuerpo y escribe altText.");
+                        return;
+                      }
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      appendMetadata(formData, metadata);
+                      setMessage("Subiendo imagen de cuerpo...");
+                      try {
+                        const result = await api(`/api/admin/articles/${state.current.id}/body-images`, { method: "POST", body: formData });
+                        setMessage(`Imagen de cuerpo guardada. Snippet: ${result.publicUrl}`);
+                        await openArticle(state.current.id);
+                      } catch (error) {
+                        setMessage(`Error subiendo imagen de cuerpo: ${error.message}`);
+                      }
+                    }
+
+                    async function importBodyImage(event) {
+                      event.preventDefault();
+                      if (!state.current) return;
+                      const body = importPayload("bodyImportUrl");
+                      if (!body) return;
+                      setMessage("Importando imagen de cuerpo...");
+                      try {
+                        const result = await api(`/api/admin/articles/${state.current.id}/body-images/import`, { method: "POST", body: JSON.stringify(body) });
+                        setMessage(`Imagen de cuerpo importada. Snippet disponible para copiar.`);
+                        await openArticle(state.current.id);
+                      } catch (error) {
+                        setMessage(`Error importando imagen de cuerpo: ${error.message}`);
+                      }
+                    }
+
+                    function imageMetadata() {
+                      return {
+                        altText: document.getElementById("altText").value.trim(),
+                        caption: document.getElementById("caption").value.trim(),
+                        credit: document.getElementById("credit").value.trim(),
+                        sourceUrl: document.getElementById("sourceUrl").value.trim(),
+                        rightsNotes: document.getElementById("rightsNotes").value.trim(),
+                      };
+                    }
+
+                    function importPayload(inputId) {
+                      const imageUrl = document.getElementById(inputId).value.trim();
+                      const metadata = imageMetadata();
+                      const lowerImageUrl = imageUrl.toLowerCase();
+                      if (!imageUrl || (!lowerImageUrl.startsWith("http://") && !lowerImageUrl.startsWith("https://"))) {
+                        setMessage("La URL de importacion debe ser http o https.");
+                        return null;
+                      }
+                      if (!metadata.altText || !metadata.caption || !metadata.credit || !metadata.sourceUrl || !metadata.rightsNotes) {
+                        setMessage("Para importar son obligatorios alt text, caption, credit, source URL y rights notes.");
+                        return null;
+                      }
+                      return { imageUrl, ...metadata };
+                    }
+
+                    function appendMetadata(formData, metadata) {
+                      formData.append("altText", metadata.altText);
+                      appendIfPresent(formData, "caption", metadata.caption);
+                      appendIfPresent(formData, "credit", metadata.credit);
+                      appendIfPresent(formData, "sourceUrl", metadata.sourceUrl);
+                      appendIfPresent(formData, "rightsNotes", metadata.rightsNotes);
                     }
 
                     function appendIfPresent(formData, key, value) {
@@ -324,6 +556,34 @@ public class AdminUiController {
 
                     function emptyToNull(value) {
                       return value && value.trim() ? value.trim() : null;
+                    }
+
+                    function showFileHint(event, targetId) {
+                      const file = event.target.files[0];
+                      const target = document.getElementById(targetId);
+                      if (!file) {
+                        target.textContent = "";
+                        return;
+                      }
+                      const warnings = [];
+                      if (file.size > 8 * 1024 * 1024) warnings.push("supera el limite backend de 8 MB");
+                      if (file.size > 400 * 1024) warnings.push("para cover, intenta optimizar por debajo de 400 KB si es viable");
+                      target.textContent = `${file.name} · ${formatBytes(file.size)}${warnings.length ? " · Aviso: " + warnings.join("; ") : ""}`;
+                    }
+
+                    function formatBytes(bytes) {
+                      if (!bytes && bytes !== 0) return "-";
+                      if (bytes < 1024) return `${bytes} B`;
+                      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+                    }
+
+                    function imageSizeLabel(image) {
+                      return image && (image.width || image.height) ? ` · ${image.width || "?"}x${image.height || "?"} px` : "";
+                    }
+
+                    function linkOrDash(value) {
+                      return value ? `<a class="public-link" href="${escapeAttribute(value)}" target="_blank" rel="noreferrer">${escapeHtml(value)}</a>` : "-";
                     }
 
                     function setMessage(value) {
@@ -337,6 +597,10 @@ public class AdminUiController {
                         .replaceAll(">", "&gt;")
                         .replaceAll('"', "&quot;")
                         .replaceAll("'", "&#039;");
+                    }
+
+                    function escapeAttribute(value) {
+                      return escapeHtml(value).replaceAll("`", "&#096;");
                     }
 
                     loadCategories()

@@ -5,6 +5,7 @@ import com.reuniondearte.api.article.ArticleRepository;
 import com.reuniondearte.api.article.ArticleStatus;
 import com.reuniondearte.api.category.Category;
 import com.reuniondearte.api.category.CategoryRepository;
+import com.reuniondearte.api.media.ArticleMediaRepository;
 import com.reuniondearte.api.seo.SeoMetadata;
 import com.reuniondearte.api.seo.SeoMetadataRepository;
 import jakarta.validation.Valid;
@@ -31,11 +32,18 @@ public class AdminArticleController {
     private final ArticleRepository articles;
     private final CategoryRepository categories;
     private final SeoMetadataRepository seoMetadata;
+    private final ArticleMediaRepository articleMedia;
 
-    public AdminArticleController(ArticleRepository articles, CategoryRepository categories, SeoMetadataRepository seoMetadata) {
+    public AdminArticleController(
+            ArticleRepository articles,
+            CategoryRepository categories,
+            SeoMetadataRepository seoMetadata,
+            ArticleMediaRepository articleMedia
+    ) {
         this.articles = articles;
         this.categories = categories;
         this.seoMetadata = seoMetadata;
+        this.articleMedia = articleMedia;
     }
 
     @GetMapping
@@ -48,7 +56,14 @@ public class AdminArticleController {
     @GetMapping("/{id}")
     public AdminArticleResponse detail(@PathVariable Long id) {
         Article article = articleOr404(id);
-        return AdminArticleResponse.from(article, seoMetadata.findByArticleId(article.getId()).orElse(null));
+        return AdminArticleResponse.from(
+                article,
+                seoMetadata.findByArticleId(article.getId()).orElse(null),
+                articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body")
+                        .stream()
+                        .map(AdminArticleMediaResponse::from)
+                        .toList()
+        );
     }
 
     @PostMapping
