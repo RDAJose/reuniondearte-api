@@ -44,9 +44,30 @@ public record AdminArticleMediaResponse(
     }
 
     private static String markdownSnippet(MediaAsset mediaAsset) {
-        String alt = mediaAsset.getAltText() == null ? "" : mediaAsset.getAltText();
-        String caption = mediaAsset.getCaption() == null ? "" : mediaAsset.getCaption();
-        String credit = mediaAsset.getCredit() == null ? "" : mediaAsset.getCredit();
-        return "![" + alt + "](" + mediaAsset.getPublicUrl() + ")\n\n*" + caption + ". Crédito: " + credit + ".*";
+        String alt = mediaAsset.getAltText() == null ? "" : mediaAsset.getAltText().trim();
+        StringBuilder snippet = new StringBuilder("![" + alt + "](" + mediaAsset.getPublicUrl() + ")");
+        String caption = cleanTrailingPunctuation(mediaAsset.getCaption());
+        String credit = cleanTrailingPunctuation(mediaAsset.getCredit());
+        if (!caption.isBlank() || !credit.isBlank()) {
+            snippet.append("\n\n*");
+            if (!caption.isBlank()) {
+                snippet.append(caption);
+            }
+            if (!credit.isBlank()) {
+                if (!caption.isBlank()) {
+                    snippet.append(". ");
+                }
+                snippet.append("Credito: ").append(credit);
+            }
+            snippet.append(".*");
+        }
+        return snippet.toString();
+    }
+
+    private static String cleanTrailingPunctuation(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim().replaceAll("[.]+$", "");
     }
 }

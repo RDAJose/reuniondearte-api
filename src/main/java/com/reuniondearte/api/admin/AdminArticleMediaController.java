@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,9 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/admin/articles")
 public class AdminArticleMediaController {
+    private static final String FEATURED_ROLE = "ARTICLE_FEATURED";
+    private static final List<String> FEATURED_ROLES = List.of("ARTICLE_FEATURED", "featured", "cover");
+
     private final ArticleRepository articles;
     private final MediaAssetRepository mediaAssets;
     private final ArticleMediaRepository articleMedia;
@@ -77,6 +84,7 @@ public class AdminArticleMediaController {
                 blankToNull(rightsNotes)
         );
         MediaAsset savedMediaAsset = mediaAssets.save(mediaAsset);
+        replaceFeaturedAssociation(article, savedMediaAsset);
         article.updateCoverMedia(savedMediaAsset);
         Article savedArticle = articles.save(article);
         return AdminArticleCoverResponse.from(savedArticle, savedMediaAsset);
@@ -116,9 +124,21 @@ public class AdminArticleMediaController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
         MediaStorageService.StoredImage storedImage = mediaStorage.importArticleImage(article.getSlug(), "cover", request.imageUrl());
         MediaAsset savedMediaAsset = saveMediaAsset(storedImage, request);
+        replaceFeaturedAssociation(article, savedMediaAsset);
         article.updateCoverMedia(savedMediaAsset);
         Article savedArticle = articles.save(article);
         return AdminArticleCoverResponse.from(savedArticle, savedMediaAsset);
+    }
+
+    @DeleteMapping("/{id}/cover")
+    @Transactional
+    public ResponseEntity<Void> removeCover(@PathVariable Long id) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        articleMedia.deleteByArticleIdAndRoleIn(article.getId(), FEATURED_ROLES);
+        article.updateCoverMedia(null);
+        articles.save(article);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/{id}/body-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -197,6 +217,11 @@ public class AdminArticleMediaController {
                 blankToNull(rightsNotes)
         );
         return mediaAssets.save(mediaAsset);
+    }
+
+    private void replaceFeaturedAssociation(Article article, MediaAsset mediaAsset) {
+        articleMedia.deleteByArticleIdAndRoleIn(article.getId(), FEATURED_ROLES);
+        articleMedia.save(ArticleMedia.create(article, mediaAsset, FEATURED_ROLE, 0));
     }
 
     private String blankToNull(String value) {

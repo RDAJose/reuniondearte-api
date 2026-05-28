@@ -9,4 +9,6 @@ public interface ArticleMediaRepository extends JpaRepository<ArticleMedia, Long
     List<ArticleMedia> findByArticleIdAndRoleOrderBySortOrderAscIdAsc(Long articleId, String role);
 
     int countByArticleIdAndRole(Long articleId, String role);
+
+    void deleteByArticleIdAndRoleIn(Long articleId, List<String> roles);
 }

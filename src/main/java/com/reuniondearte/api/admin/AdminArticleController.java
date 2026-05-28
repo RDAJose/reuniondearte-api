@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -119,6 +120,17 @@ public class AdminArticleController {
         article.moveToDraft();
         Article saved = articles.save(article);
         return AdminArticleResponse.from(saved, seoMetadata.findByArticleId(saved.getId()).orElse(null));
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        Article article = articleOr404(id);
+        if (article.getStatus() == ArticleStatus.published) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Move the article to draft before deleting it");
+        }
+        articles.delete(article);
+        return ResponseEntity.noContent().build();
     }
 
     private void apply(Article article, AdminArticleRequest request, ArticleStatus status) {

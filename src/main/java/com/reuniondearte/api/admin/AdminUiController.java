@@ -55,6 +55,7 @@ public class AdminUiController {
                     .data-list dt { color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
                     .data-list dd { margin: 0; word-break: break-word; }
                     .notice { border-left: 3px solid #92400e; background: #fffbeb; color: #713f12; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+                    .warning-list { display: grid; gap: 6px; margin: 10px 0 12px; padding: 10px 12px; border: 1px solid #f59e0b; background: #fffbeb; color: #713f12; font-size: 13px; line-height: 1.4; }
                     .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
                     .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
                     .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
@@ -125,12 +126,14 @@ public class AdminUiController {
                           <div class="toolbar" style="margin-top: 14px;">
                             <button type="submit">Guardar cambios</button>
                             <button type="button" id="publishButton">Publicar</button>
-                            <button type="button" id="draftButton" class="secondary">Volver a draft</button>
+                            <button type="button" id="draftButton" class="secondary">Mover a borrador</button>
+                            <button type="button" id="deleteArticleButton" class="danger">Eliminar articulo</button>
                           </div>
                         </form>
                         <div class="panel">
                           <h3>Imagen principal</h3>
                           <div id="coverStatus" class="image-status">Sin imagen principal</div>
+                          <div id="coverWarnings"></div>
                           <div id="currentCover"></div>
                           <form id="coverMetadataForm">
                             <label for="altText">Alt text obligatorio</label>
@@ -146,6 +149,7 @@ public class AdminUiController {
                             <p class="hint">Recomendacion cover: maximo 1600px de ancho, preferente webp, intenta quedar por debajo de 400 KB cuando sea viable.</p>
                             <div class="toolbar" style="margin-top: 14px;">
                               <button type="submit" class="secondary">Guardar datos de imagen</button>
+                              <button type="button" id="removeCoverButton" class="danger">Quitar imagen principal</button>
                             </div>
                           </form>
                           <form id="coverForm">
@@ -153,7 +157,7 @@ public class AdminUiController {
                             <input id="coverFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
                             <p id="coverFileHint" class="hint"></p>
                             <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Subir cover</button>
+                              <button type="submit">Cambiar imagen principal</button>
                             </div>
                           </form>
                           <h3 style="margin-top: 18px;">Importar imagen desde URL</h3>
@@ -213,6 +217,8 @@ public class AdminUiController {
                     document.getElementById("refreshButton").addEventListener("click", loadArticles);
                     document.getElementById("publishButton").addEventListener("click", () => changeStatus("publish"));
                     document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
+                    document.getElementById("deleteArticleButton").addEventListener("click", deleteArticle);
+                    document.getElementById("removeCoverButton").addEventListener("click", removeCover);
                     articleForm.addEventListener("submit", saveArticle);
                     coverForm.addEventListener("submit", uploadCover);
                     coverMetadataForm.addEventListener("submit", saveCoverMetadata);
@@ -302,8 +308,11 @@ public class AdminUiController {
                       publicLink.href = publicPath;
                       publicLink.textContent = `${window.location.origin}${publicPath}`;
                       fillImageMetadata(article.cover);
+                      renderCoverWarnings(article.cover);
                       renderCurrentCover(article.cover);
                       renderBodyImages(article.bodyImages || []);
+                      document.getElementById("removeCoverButton").disabled = !article.cover;
+                      document.getElementById("deleteArticleButton").disabled = article.status === "published";
                     }
 
                     function fillImageMetadata(cover) {
@@ -343,6 +352,22 @@ public class AdminUiController {
                       `;
                     }
 
+                    function renderCoverWarnings(cover) {
+                      const container = document.getElementById("coverWarnings");
+                      if (!cover) {
+                        container.innerHTML = "";
+                        return;
+                      }
+                      const warnings = [];
+                      if (!cover.coverAlt) warnings.push("Falta alt text para accesibilidad y contexto editorial.");
+                      if (!cover.coverCredit) warnings.push("Falta credit; revisa atribucion antes de publicar.");
+                      if (!cover.sourceUrl) warnings.push("Source URL vacio; dejalo documentado si existe fuente/licencia externa.");
+                      if (!cover.rightsNotes) warnings.push("Rights notes vacio; recomendable para control legal.");
+                      container.innerHTML = warnings.length
+                        ? `<div class="warning-list">${warnings.map((warning) => `<div>${escapeHtml(warning)}</div>`).join("")}</div>`
+                        : "";
+                    }
+
                     function renderBodyImages(images) {
                       const container = document.getElementById("bodyImages");
                       if (!images.length) {
@@ -351,9 +376,10 @@ public class AdminUiController {
                       }
                       container.innerHTML = images.map((image, index) => `
                         <div class="body-image">
+                          <h4 style="margin:0 0 8px;">Imagen de cuerpo ${index + 1}</h4>
                           <img class="image-preview" src="${escapeAttribute(image.publicUrl)}" alt="${escapeAttribute(image.altText || "")}">
                           <dl class="data-list">
-                            <div><dt>Imagen ${index + 1}</dt><dd><a class="public-link" href="${escapeAttribute(image.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(image.publicUrl)}</a></dd></div>
+                            <div><dt>URL publica</dt><dd><a class="public-link" href="${escapeAttribute(image.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(image.publicUrl)}</a></dd></div>
                             <div><dt>Alt text</dt><dd>${escapeHtml(image.altText || "-")}</dd></div>
                             <div><dt>Caption</dt><dd>${escapeHtml(image.caption || "-")}</dd></div>
                             <div><dt>Credit</dt><dd>${escapeHtml(image.credit || "-")}</dd></div>
@@ -405,6 +431,10 @@ public class AdminUiController {
 
                     async function changeStatus(action) {
                       if (!state.current) return;
+                      if (action === "draft" && state.current.status === "published") {
+                        const confirmed = confirm("Mover este articulo publicado a borrador lo retirara de la API publica. No borra imagenes ni ficheros. ¿Continuar?");
+                        if (!confirmed) return;
+                      }
                       setMessage(action === "publish" ? "Publicando..." : "Moviendo a draft...");
                       try {
                         const updated = await api(`/api/admin/articles/${state.current.id}/${action}`, { method: "PATCH" });
@@ -416,6 +446,30 @@ public class AdminUiController {
                         setMessage(action === "publish" ? "Articulo publicado." : "Articulo en draft.");
                       } catch (error) {
                         setMessage(`Error cambiando estado: ${error.message}`);
+                      }
+                    }
+
+                    async function deleteArticle() {
+                      if (!state.current) return;
+                      if (state.current.status === "published") {
+                        setMessage("No se puede eliminar un articulo publicado. Muevelo primero a borrador.");
+                        return;
+                      }
+                      const expected = `ELIMINAR ${state.current.slug}`;
+                      const typed = prompt(`Confirmacion fuerte: escribe exactamente "${expected}" para eliminar el articulo. No se borraran ficheros de storage.`);
+                      if (typed !== expected) {
+                        setMessage("Eliminacion cancelada.");
+                        return;
+                      }
+                      setMessage("Eliminando articulo...");
+                      try {
+                        await api(`/api/admin/articles/${state.current.id}`, { method: "DELETE" });
+                        editor.hidden = true;
+                        state.current = null;
+                        await loadArticles();
+                        setMessage("Articulo eliminado. Los ficheros de media no se han borrado fisicamente.");
+                      } catch (error) {
+                        setMessage(`Error eliminando articulo: ${error.message}`);
                       }
                     }
 
@@ -460,6 +514,20 @@ public class AdminUiController {
                         setMessage("Datos de imagen guardados.");
                       } catch (error) {
                         setMessage(`Error guardando datos de imagen: ${error.message}`);
+                      }
+                    }
+
+                    async function removeCover() {
+                      if (!state.current || !state.current.cover) return;
+                      const confirmed = confirm("Quitar la imagen principal desasignara la portada del articulo. No borrara el fichero fisico ni el media asset. ¿Continuar?");
+                      if (!confirmed) return;
+                      setMessage("Quitando imagen principal...");
+                      try {
+                        await api(`/api/admin/articles/${state.current.id}/cover`, { method: "DELETE" });
+                        await openArticle(state.current.id);
+                        setMessage("Imagen principal quitada. El fichero de storage se conserva.");
+                      } catch (error) {
+                        setMessage(`Error quitando imagen principal: ${error.message}`);
                       }
                     }
 
@@ -568,7 +636,7 @@ public class AdminUiController {
                       const warnings = [];
                       if (file.size > 8 * 1024 * 1024) warnings.push("supera el limite backend de 8 MB");
                       if (file.size > 400 * 1024) warnings.push("para cover, intenta optimizar por debajo de 400 KB si es viable");
-                      target.textContent = `${file.name} · ${formatBytes(file.size)}${warnings.length ? " · Aviso: " + warnings.join("; ") : ""}`;
+                      target.textContent = `${file.name} - ${formatBytes(file.size)}${warnings.length ? " - Aviso: " + warnings.join("; ") : ""}`;
                     }
 
                     function formatBytes(bytes) {
@@ -579,7 +647,7 @@ public class AdminUiController {
                     }
 
                     function imageSizeLabel(image) {
-                      return image && (image.width || image.height) ? ` · ${image.width || "?"}x${image.height || "?"} px` : "";
+                      return image && (image.width || image.height) ? ` - ${image.width || "?"}x${image.height || "?"} px` : "";
                     }
 
                     function linkOrDash(value) {
