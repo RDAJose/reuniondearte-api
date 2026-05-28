@@ -43,5 +43,16 @@ public class ArticleRevision {
     private String changeNote;
 
     private OffsetDateTime createdAt;
-}
 
+    public static ArticleRevision importedArticleBackup(Article article, String changeNote) {
+        ArticleRevision revision = new ArticleRevision();
+        revision.article = article;
+        revision.title = article.getTitle();
+        revision.contentMarkdown = article.getContentMarkdown();
+        revision.contentHtml = article.getContentHtml();
+        revision.status = article.getStatus().name();
+        revision.changeNote = changeNote;
+        revision.createdAt = OffsetDateTime.now();
+        return revision;
+    }
+}

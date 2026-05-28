@@ -214,6 +214,15 @@ public class Article {
         this.updatedAt = now;
     }
 
+    public void normalizeImportedContent(String contentMarkdown, boolean clearContentHtml) {
+        this.contentMarkdown = contentMarkdown;
+        if (clearContentHtml) {
+            this.contentHtml = null;
+        }
+        this.readingTimeMinutes = calculateReadingTime(contentMarkdown);
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     private Integer calculateReadingTime(String content) {
         if (content == null || content.isBlank()) {
             return null;
