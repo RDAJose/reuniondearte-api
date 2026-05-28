@@ -39,3 +39,6 @@ storage/postgres-data/
 storage/media/
 storage/backups/
 storage/import-logs/
+
+storage/reports/
+storage/backups/
