@@ -159,8 +159,64 @@ public class AdminArticleMediaController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
         int sortOrder = articleMedia.countByArticleIdAndRole(article.getId(), "body");
         String filenameBase = "body-" + (sortOrder + 1);
-        MediaStorageService.StoredImage storedImage = mediaStorage.storeArticleImage(article.getSlug(), filenameBase, file);
-        MediaAsset savedMediaAsset = saveMediaAsset(storedImage, altText, caption, credit, sourceUrl, rightsNotes);
+        MediaStorageService.StoredMedia storedMedia = mediaStorage.storeArticleBodyImage(article.getSlug(), filenameBase, file);
+        MediaAsset savedMediaAsset = saveMediaAsset(storedMedia, altText, caption, credit, sourceUrl, rightsNotes);
+        ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "body", sortOrder));
+        return AdminArticleMediaResponse.from(savedArticleMedia);
+    }
+
+    @PostMapping(value = "/{id}/body-images/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public List<AdminArticleMediaResponse> uploadBodyImages(
+            @PathVariable Long id,
+            @RequestPart("files") List<MultipartFile> files,
+            @RequestParam String altText,
+            @RequestParam(required = false) String caption,
+            @RequestParam(required = false) String credit,
+            @RequestParam(required = false) String sourceUrl,
+            @RequestParam(required = false) String rightsNotes
+    ) {
+        if (files == null || files.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one image file is required");
+        }
+        if (altText == null || altText.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "altText is required");
+        }
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        int sortOrder = articleMedia.countByArticleIdAndRole(article.getId(), "body");
+        List<AdminArticleMediaResponse> responses = new java.util.ArrayList<>();
+        for (MultipartFile file : files) {
+            String filenameBase = "body-" + (sortOrder + 1);
+            MediaStorageService.StoredMedia storedMedia = mediaStorage.storeArticleBodyImage(article.getSlug(), filenameBase, file);
+            MediaAsset savedMediaAsset = saveMediaAsset(storedMedia, altText, caption, credit, sourceUrl, rightsNotes);
+            ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "body", sortOrder));
+            responses.add(AdminArticleMediaResponse.from(savedArticleMedia));
+            sortOrder++;
+        }
+        return responses;
+    }
+
+    @PostMapping(value = "/{id}/body-media", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public AdminArticleMediaResponse uploadBodyMedia(
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(required = false) String altText,
+            @RequestParam(required = false) String caption,
+            @RequestParam(required = false) String credit,
+            @RequestParam(required = false) String sourceUrl,
+            @RequestParam(required = false) String rightsNotes
+    ) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        int sortOrder = articleMedia.countByArticleIdAndRole(article.getId(), "body");
+        String filenameBase = "body-" + (sortOrder + 1);
+        MediaStorageService.StoredMedia storedMedia = mediaStorage.storeArticleBodyMedia(article.getSlug(), filenameBase, file);
+        if ("image".equals(storedMedia.mediaType()) && (altText == null || altText.isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "altText is required for images");
+        }
+        MediaAsset savedMediaAsset = saveMediaAsset(storedMedia, altText, caption, credit, sourceUrl, rightsNotes);
         ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "body", sortOrder));
         return AdminArticleMediaResponse.from(savedArticleMedia);
     }
@@ -179,6 +235,17 @@ public class AdminArticleMediaController {
         MediaAsset savedMediaAsset = saveMediaAsset(storedImage, request);
         ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "body", sortOrder));
         return AdminArticleMediaResponse.from(savedArticleMedia);
+    }
+
+    @DeleteMapping("/{id}/body-media/{mediaAssetId}")
+    @Transactional
+    public ResponseEntity<Void> removeBodyMedia(@PathVariable Long id, @PathVariable Long mediaAssetId) {
+        Article article = articles.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        ArticleMedia association = articleMedia.findByArticleIdAndMediaAssetIdAndRole(article.getId(), mediaAssetId, "body")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Body media association not found"));
+        articleMedia.delete(association);
+        return ResponseEntity.noContent().build();
     }
 
     private MediaAsset saveMediaAsset(MediaStorageService.StoredImage storedImage, AdminImageImportRequest request) {
@@ -211,6 +278,34 @@ public class AdminArticleMediaController {
                 storedImage.width(),
                 storedImage.height(),
                 altText.trim(),
+                blankToNull(caption),
+                blankToNull(credit),
+                blankToNull(sourceUrl),
+                blankToNull(rightsNotes)
+        );
+        return mediaAssets.save(mediaAsset);
+    }
+
+    private MediaAsset saveMediaAsset(
+            MediaStorageService.StoredMedia storedMedia,
+            String altText,
+            String caption,
+            String credit,
+            String sourceUrl,
+            String rightsNotes
+    ) {
+        MediaAsset mediaAsset = new MediaAsset();
+        mediaAsset.applyStoredMedia(
+                storedMedia.mediaType(),
+                storedMedia.storageProvider(),
+                storedMedia.storagePath(),
+                storedMedia.publicUrl(),
+                storedMedia.filename(),
+                storedMedia.mimeType(),
+                storedMedia.sizeBytes(),
+                storedMedia.width(),
+                storedMedia.height(),
+                blankToNull(altText),
                 blankToNull(caption),
                 blankToNull(credit),
                 blankToNull(sourceUrl),
