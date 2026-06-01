@@ -61,10 +61,6 @@ public class MediaAsset {
         return publicUrl;
     }
 
-    public String getMediaType() {
-        return mediaType;
-    }
-
     public String getAltText() {
         return altText;
     }
@@ -161,43 +157,6 @@ public class MediaAsset {
     ) {
         OffsetDateTime now = OffsetDateTime.now();
         this.mediaType = "image";
-        this.storageProvider = storageProvider;
-        this.storagePath = storagePath;
-        this.publicUrl = publicUrl;
-        this.filename = filename;
-        this.mimeType = mimeType;
-        this.sizeBytes = sizeBytes;
-        this.width = width;
-        this.height = height;
-        this.altText = altText;
-        this.caption = caption;
-        this.credit = credit;
-        this.sourceUrl = sourceUrl;
-        this.rightsNotes = rightsNotes;
-        if (this.createdAt == null) {
-            this.createdAt = now;
-        }
-        this.updatedAt = now;
-    }
-
-    public void applyStoredMedia(
-            String mediaType,
-            String storageProvider,
-            String storagePath,
-            String publicUrl,
-            String filename,
-            String mimeType,
-            Long sizeBytes,
-            Integer width,
-            Integer height,
-            String altText,
-            String caption,
-            String credit,
-            String sourceUrl,
-            String rightsNotes
-    ) {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.mediaType = mediaType;
         this.storageProvider = storageProvider;
         this.storagePath = storagePath;
         this.publicUrl = publicUrl;
