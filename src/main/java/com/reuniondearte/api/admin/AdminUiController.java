@@ -230,19 +230,20 @@ public class AdminUiController {
                   </main>
                   <script>
                     const state = { status: "draft", articles: [], current: null, categories: [], comments: [] };
-                    const list = document.getElementById("articleList");
-                    const message = document.getElementById("message");
-                    const pendingComments = document.getElementById("pendingComments");
-                    const editor = document.getElementById("editor");
-                    const articleForm = document.getElementById("articleForm");
-                    const coverForm = document.getElementById("coverForm");
-                    const coverMetadataForm = document.getElementById("coverMetadataForm");
-                    const coverImportForm = document.getElementById("coverImportForm");
-                    const bodyImageForm = document.getElementById("bodyImageForm");
-                    const bodyImportForm = document.getElementById("bodyImportForm");
-                    const bodyMediaForm = document.getElementById("bodyMediaForm");
-                    const embedForm = document.getElementById("embedForm");
-                    const categorySelect = document.getElementById("category");
+                    const byId = (id) => document.getElementById(id);
+                    const list = byId("articleList");
+                    const message = byId("message");
+                    const pendingComments = byId("pendingComments");
+                    const editor = byId("editor");
+                    const articleForm = byId("articleForm");
+                    const coverForm = byId("coverForm");
+                    const coverMetadataForm = byId("coverMetadataForm");
+                    const coverImportForm = byId("coverImportForm");
+                    const bodyImageForm = byId("bodyImageForm");
+                    const bodyImportForm = byId("bodyImportForm");
+                    const bodyMediaForm = byId("bodyMediaForm");
+                    const embedForm = byId("embedForm");
+                    const categorySelect = byId("category");
 
                     document.querySelectorAll("[data-status]").forEach((button) => {
                       button.addEventListener("click", () => {
@@ -252,25 +253,32 @@ public class AdminUiController {
                       });
                     });
 
-                    document.getElementById("refreshButton").addEventListener("click", loadArticles);
-                    document.getElementById("refreshCommentsButton").addEventListener("click", loadPendingComments);
-                    document.getElementById("publishButton").addEventListener("click", () => changeStatus("publish"));
-                    document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
-                    document.getElementById("deleteArticleButton").addEventListener("click", deleteArticle);
-                    document.getElementById("removeCoverButton").addEventListener("click", removeCover);
-                    articleForm.addEventListener("submit", saveArticle);
-                    coverForm.addEventListener("submit", uploadCover);
-                    coverMetadataForm.addEventListener("submit", saveCoverMetadata);
-                    coverImportForm.addEventListener("submit", importCover);
-                    bodyImageForm.addEventListener("submit", uploadBodyImage);
-                    bodyImportForm.addEventListener("submit", importBodyImage);
-                    bodyMediaForm.addEventListener("submit", uploadBodyMedia);
-                    embedForm.addEventListener("submit", insertEmbed);
-                    document.getElementById("insertGalleryButton").addEventListener("click", () => insertTextAtCursor(buildGallerySnippet()));
-                    document.getElementById("copyGalleryButton").addEventListener("click", copyGallery);
-                    document.getElementById("coverFile").addEventListener("change", (event) => showFileHint(event, "coverFileHint"));
-                    document.getElementById("bodyImageFile").addEventListener("change", (event) => showFileHint(event, "bodyFileHint"));
-                    document.getElementById("bodyMediaFile").addEventListener("change", (event) => showFileHint(event, "bodyMediaFileHint"));
+                    on("refreshButton", "click", loadArticles);
+                    on("refreshCommentsButton", "click", loadPendingComments);
+                    on("publishButton", "click", () => changeStatus("publish"));
+                    on("draftButton", "click", () => changeStatus("draft"));
+                    on("deleteArticleButton", "click", deleteArticle);
+                    on("removeCoverButton", "click", removeCover);
+                    articleForm?.addEventListener("submit", saveArticle);
+                    coverForm?.addEventListener("submit", uploadCover);
+                    coverMetadataForm?.addEventListener("submit", saveCoverMetadata);
+                    coverImportForm?.addEventListener("submit", importCover);
+                    bodyImageForm?.addEventListener("submit", uploadBodyImage);
+                    bodyImportForm?.addEventListener("submit", importBodyImage);
+                    bodyMediaForm?.addEventListener("submit", uploadBodyMedia);
+                    embedForm?.addEventListener("submit", insertEmbed);
+                    on("insertGalleryButton", "click", () => insertTextAtCursor(buildGallerySnippet()));
+                    on("copyGalleryButton", "click", copyGallery);
+                    on("coverFile", "change", (event) => showFileHint(event, "coverFileHint"));
+                    on("bodyImageFile", "change", (event) => showFileHint(event, "bodyFileHint"));
+                    on("bodyMediaFile", "change", (event) => showFileHint(event, "bodyMediaFileHint"));
+
+                    function on(id, eventName, handler) {
+                      const element = byId(id);
+                      if (element) {
+                        element.addEventListener(eventName, handler);
+                      }
+                    }
 
                     async function api(path, options = {}) {
                       const response = await fetch(path, {
@@ -288,6 +296,7 @@ public class AdminUiController {
                     }
 
                     async function loadCategories() {
+                      if (!categorySelect) return;
                       state.categories = await api("/api/categories");
                       categorySelect.innerHTML = state.categories
                         .map((category) => `<option value="${escapeHtml(category.slug)}">${escapeHtml(category.name)} (${escapeHtml(category.slug)})</option>`)
@@ -295,8 +304,9 @@ public class AdminUiController {
                     }
 
                     async function loadArticles() {
+                      if (!list) return;
                       setMessage(`Cargando ${state.status}...`);
-                      editor.hidden = true;
+                      if (editor) editor.hidden = true;
                       state.current = null;
                       try {
                         state.articles = await api(`/api/admin/articles?status=${encodeURIComponent(state.status)}`);
@@ -308,6 +318,7 @@ public class AdminUiController {
                     }
 
                     async function loadPendingComments() {
+                      if (!pendingComments) return;
                       pendingComments.innerHTML = `<p class="empty">Cargando comentarios...</p>`;
                       try {
                         state.comments = await api("/api/admin/comments?status=PENDING");
@@ -318,6 +329,7 @@ public class AdminUiController {
                     }
 
                     function renderPendingComments() {
+                      if (!pendingComments) return;
                       pendingComments.innerHTML = state.comments.length
                         ? state.comments.map((comment) => `
                             <article class="comment-card" data-comment-id="${comment.id}">
@@ -341,6 +353,7 @@ public class AdminUiController {
 
                     async function moderateComment(button) {
                       const card = button.closest("[data-comment-id]");
+                      if (!card) return;
                       const id = card.dataset.commentId;
                       const action = button.dataset.commentAction;
                       if (action === "delete" && !confirm("Eliminar este comentario pendiente de forma definitiva. Continuar?")) {
@@ -359,6 +372,7 @@ public class AdminUiController {
                     }
 
                     function renderList() {
+                      if (!list) return;
                       list.innerHTML = state.articles.length
                         ? state.articles.map((article) => `
                             <button type="button" class="article-row" data-id="${article.id}">
@@ -377,9 +391,9 @@ public class AdminUiController {
                       try {
                         const article = await api(`/api/admin/articles/${id}`);
                         state.current = article;
-                        list.querySelectorAll("[data-id]").forEach((button) => button.classList.toggle("active", button.dataset.id === String(id)));
+                        list?.querySelectorAll("[data-id]").forEach((button) => button.classList.toggle("active", button.dataset.id === String(id)));
                         fillForm(article);
-                        editor.hidden = false;
+                        if (editor) editor.hidden = false;
                         setMessage(`Articulo #${article.id} abierto.`);
                       } catch (error) {
                         setMessage(`Error abriendo articulo: ${error.message}`);
@@ -387,46 +401,50 @@ public class AdminUiController {
                     }
 
                     function fillForm(article) {
-                      document.getElementById("editorTitle").textContent = `Articulo #${article.id}`;
-                      document.getElementById("title").value = article.title || "";
-                      document.getElementById("slug").value = article.slug || "";
-                      document.getElementById("excerpt").value = article.excerpt || "";
-                      document.getElementById("contentMarkdown").value = article.content_markdown || "";
-                      document.getElementById("category").value = article.category || "cultura";
-                      document.getElementById("status").value = article.status || "draft";
-                      document.getElementById("canonicalUrl").value = article.canonical_url || "";
-                      document.getElementById("metaTitle").value = article.meta_title || "";
-                      document.getElementById("metaDescription").value = article.meta_description || "";
-                      document.getElementById("noindex").checked = Boolean(article.noindex);
+                      setText("editorTitle", `Articulo #${article.id}`);
+                      setValue("title", article.title || "");
+                      setValue("slug", article.slug || "");
+                      setValue("excerpt", article.excerpt || "");
+                      setValue("contentMarkdown", article.content_markdown || "");
+                      setValue("category", article.category || "cultura");
+                      setValue("status", article.status || "draft");
+                      setValue("canonicalUrl", article.canonical_url || "");
+                      setValue("metaTitle", article.meta_title || "");
+                      setValue("metaDescription", article.meta_description || "");
+                      setChecked("noindex", Boolean(article.noindex));
                       const publicPath = `/api/articles/${encodeURIComponent(article.slug || "")}`;
-                      const publicLink = document.getElementById("publicApiLink");
-                      publicLink.href = publicPath;
-                      publicLink.textContent = `${window.location.origin}${publicPath}`;
+                      const publicLink = byId("publicApiLink");
+                      if (publicLink) {
+                        publicLink.href = publicPath;
+                        publicLink.textContent = `${window.location.origin}${publicPath}`;
+                      }
                       fillImageMetadata(article.cover);
                       renderCoverWarnings(article.cover);
                       renderCurrentCover(article.cover);
                       renderBodyImages(article.bodyImages || []);
-                      document.getElementById("removeCoverButton").disabled = !article.cover;
-                      document.getElementById("deleteArticleButton").disabled = article.status === "published";
+                      setDisabled("removeCoverButton", !article.cover);
+                      setDisabled("deleteArticleButton", article.status === "published");
                     }
 
                     function fillImageMetadata(cover) {
-                      document.getElementById("altText").value = cover?.coverAlt || "";
-                      document.getElementById("caption").value = cover?.coverCaption || "";
-                      document.getElementById("credit").value = cover?.coverCredit || "";
-                      document.getElementById("sourceUrl").value = cover?.sourceUrl || "";
-                      document.getElementById("rightsNotes").value = cover?.rightsNotes || "";
-                      document.getElementById("coverFile").value = "";
-                      document.getElementById("coverImportUrl").value = "";
-                      document.getElementById("coverFileHint").textContent = "";
-                      document.getElementById("bodyImageFile").value = "";
-                      document.getElementById("bodyImportUrl").value = "";
-                      document.getElementById("bodyFileHint").textContent = "";
+                      setValue("altText", cover?.coverAlt || "");
+                      setValue("caption", cover?.coverCaption || "");
+                      setValue("credit", cover?.coverCredit || "");
+                      setValue("sourceUrl", cover?.sourceUrl || "");
+                      setValue("rightsNotes", cover?.rightsNotes || "");
+                      setValue("coverFile", "");
+                      setValue("coverImportUrl", "");
+                      setText("coverFileHint", "");
+                      setValue("bodyImageFile", "");
+                      setValue("bodyImportUrl", "");
+                      setText("bodyFileHint", "");
+                      setValue("bodyMediaFile", "");
                     }
 
                     function renderCurrentCover(cover) {
-                      const status = document.getElementById("coverStatus");
-                      const container = document.getElementById("currentCover");
+                      const status = byId("coverStatus");
+                      const container = byId("currentCover");
+                      if (!status || !container) return;
                       status.textContent = cover ? "Imagen principal asignada" : "Sin imagen principal";
                       status.classList.toggle("assigned", Boolean(cover));
                       if (!cover) {
@@ -448,7 +466,8 @@ public class AdminUiController {
                     }
 
                     function renderCoverWarnings(cover) {
-                      const container = document.getElementById("coverWarnings");
+                      const container = byId("coverWarnings");
+                      if (!container) return;
                       if (!cover) {
                         container.innerHTML = "";
                         return;
@@ -464,7 +483,8 @@ public class AdminUiController {
                     }
 
                     function renderBodyImages(images) {
-                      const container = document.getElementById("bodyImages");
+                      const container = byId("bodyImages");
+                      if (!container) return;
                       if (!images.length) {
                         container.innerHTML = `<p class="empty">Sin multimedia del cuerpo asociada.</p>`;
                         return;
@@ -496,14 +516,15 @@ public class AdminUiController {
                       `).join("");
                       container.querySelectorAll("[data-insert]").forEach((button) => {
                         button.addEventListener("click", () => {
-                          const textarea = document.getElementById(`snippet-${button.dataset.insert}`);
-                          insertTextAtCursor(textarea.value);
+                          const textarea = byId(`snippet-${button.dataset.insert}`);
+                          insertTextAtCursor(textarea ? textarea.value : "");
                         });
                       });
                       container.querySelectorAll("[data-copy]").forEach((button) => {
                         button.addEventListener("click", async () => {
-                          const textarea = document.getElementById(`snippet-${button.dataset.copy}`);
-                          await navigator.clipboard.writeText(textarea.value);
+                          const textarea = byId(`snippet-${button.dataset.copy}`);
+                          if (!textarea) return;
+                          await copyText(textarea.value);
                           setMessage("Snippet Markdown copiado.");
                         });
                       });
@@ -560,7 +581,7 @@ public class AdminUiController {
                     async function copyGallery() {
                       const snippet = buildGallerySnippet();
                       if (!snippet) return;
-                      await navigator.clipboard.writeText(snippet);
+                      await copyText(snippet);
                       setMessage("Galeria copiada.");
                     }
 
@@ -569,16 +590,16 @@ public class AdminUiController {
                       if (!state.current) return;
                       setMessage("Guardando...");
                       const body = {
-                        title: document.getElementById("title").value.trim(),
-                        slug: document.getElementById("slug").value.trim(),
-                        excerpt: document.getElementById("excerpt").value,
-                        content_markdown: document.getElementById("contentMarkdown").value,
-                        category: document.getElementById("category").value,
-                        status: document.getElementById("status").value,
-                        canonical_url: emptyToNull(document.getElementById("canonicalUrl").value),
-                        meta_title: emptyToNull(document.getElementById("metaTitle").value),
-                        meta_description: emptyToNull(document.getElementById("metaDescription").value),
-                        noindex: document.getElementById("noindex").checked,
+                        title: valueOf("title").trim(),
+                        slug: valueOf("slug").trim(),
+                        excerpt: valueOf("excerpt"),
+                        content_markdown: valueOf("contentMarkdown"),
+                        category: valueOf("category"),
+                        status: valueOf("status"),
+                        canonical_url: emptyToNull(valueOf("canonicalUrl")),
+                        meta_title: emptyToNull(valueOf("metaTitle")),
+                        meta_description: emptyToNull(valueOf("metaDescription")),
+                        noindex: Boolean(byId("noindex")?.checked),
                       };
                       try {
                         const saved = await api(`/api/admin/articles/${state.current.id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -639,7 +660,7 @@ public class AdminUiController {
                     async function uploadCover(event) {
                       event.preventDefault();
                       if (!state.current) return;
-                      const file = document.getElementById("coverFile").files[0];
+                      const file = byId("coverFile")?.files?.[0];
                       const metadata = imageMetadata();
                       if (!file || !metadata.altText) {
                         setMessage("Selecciona una imagen y escribe altText.");
@@ -712,7 +733,7 @@ public class AdminUiController {
                     async function uploadBodyImage(event) {
                       event.preventDefault();
                       if (!state.current) return;
-                      const files = [...document.getElementById("bodyImageFile").files];
+                      const files = [...(byId("bodyImageFile")?.files || [])];
                       const metadata = imageMetadata();
                       if (!files.length || !metadata.altText) {
                         setMessage("Selecciona una o varias imagenes de cuerpo y escribe altText.");
@@ -749,7 +770,7 @@ public class AdminUiController {
                     async function uploadBodyMedia(event) {
                       event.preventDefault();
                       if (!state.current) return;
-                      const file = document.getElementById("bodyMediaFile").files[0];
+                      const file = byId("bodyMediaFile")?.files?.[0];
                       const metadata = imageMetadata();
                       if (!file) {
                         setMessage("Selecciona un audio o video.");
@@ -770,7 +791,8 @@ public class AdminUiController {
 
                     async function insertEmbed(event) {
                       event.preventDefault();
-                      const input = document.getElementById("embedUrl");
+                      const input = byId("embedUrl");
+                      if (!input) return;
                       const cleaned = cleanEmbedUrl(input.value);
                       if (!cleaned) {
                         setMessage("Pega un enlace valido de YouTube, Vimeo, Spotify o SoundCloud.");
@@ -783,16 +805,16 @@ public class AdminUiController {
 
                     function imageMetadata() {
                       return {
-                        altText: document.getElementById("altText").value.trim(),
-                        caption: document.getElementById("caption").value.trim(),
-                        credit: document.getElementById("credit").value.trim(),
-                        sourceUrl: document.getElementById("sourceUrl").value.trim(),
-                        rightsNotes: document.getElementById("rightsNotes").value.trim(),
+                        altText: (byId("altText")?.value || "").trim(),
+                        caption: (byId("caption")?.value || "").trim(),
+                        credit: (byId("credit")?.value || "").trim(),
+                        sourceUrl: (byId("sourceUrl")?.value || "").trim(),
+                        rightsNotes: (byId("rightsNotes")?.value || "").trim(),
                       };
                     }
 
                     function importPayload(inputId) {
-                      const imageUrl = document.getElementById(inputId).value.trim();
+                      const imageUrl = (byId(inputId)?.value || "").trim();
                       const metadata = imageMetadata();
                       const lowerImageUrl = imageUrl.toLowerCase();
                       if (!imageUrl || (!lowerImageUrl.startsWith("http://") && !lowerImageUrl.startsWith("https://"))) {
@@ -824,9 +846,14 @@ public class AdminUiController {
                       return value && value.trim() ? value.trim() : null;
                     }
 
+                    function valueOf(id) {
+                      return byId(id)?.value || "";
+                    }
+
                     function showFileHint(event, targetId) {
-                      const files = [...event.target.files];
-                      const target = document.getElementById(targetId);
+                      const files = [...(event.target?.files || [])];
+                      const target = byId(targetId);
+                      if (!target) return;
                       if (!files.length) {
                         target.textContent = "";
                         return;
@@ -843,7 +870,8 @@ public class AdminUiController {
 
                     function insertTextAtCursor(snippet) {
                       if (!snippet) return;
-                      const textarea = document.getElementById("contentMarkdown");
+                      const textarea = byId("contentMarkdown");
+                      if (!textarea) return;
                       const text = `\n\n${snippet.trim()}\n\n`;
                       const start = typeof textarea.selectionStart === "number" ? textarea.selectionStart : textarea.value.length;
                       const end = typeof textarea.selectionEnd === "number" ? textarea.selectionEnd : textarea.value.length;
@@ -889,6 +917,22 @@ public class AdminUiController {
                       }
                     }
 
+                    async function copyText(value) {
+                      if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(value);
+                        return;
+                      }
+                      const textarea = document.createElement("textarea");
+                      textarea.value = value;
+                      textarea.style.position = "fixed";
+                      textarea.style.left = "-9999px";
+                      document.body.appendChild(textarea);
+                      textarea.focus();
+                      textarea.select();
+                      document.execCommand("copy");
+                      textarea.remove();
+                    }
+
                     function formatBytes(bytes) {
                       if (!bytes && bytes !== 0) return "-";
                       if (bytes < 1024) return `${bytes} B`;
@@ -909,7 +953,37 @@ public class AdminUiController {
                     }
 
                     function setMessage(value) {
-                      message.textContent = value;
+                      if (message) {
+                        message.textContent = value;
+                      }
+                    }
+
+                    function setValue(id, value) {
+                      const element = byId(id);
+                      if (element) {
+                        element.value = value;
+                      }
+                    }
+
+                    function setText(id, value) {
+                      const element = byId(id);
+                      if (element) {
+                        element.textContent = value;
+                      }
+                    }
+
+                    function setChecked(id, value) {
+                      const element = byId(id);
+                      if (element) {
+                        element.checked = value;
+                      }
+                    }
+
+                    function setDisabled(id, value) {
+                      const element = byId(id);
+                      if (element) {
+                        element.disabled = value;
+                      }
                     }
 
                     function escapeHtml(value) {
@@ -925,10 +999,25 @@ public class AdminUiController {
                       return escapeHtml(value).replaceAll("`", "&#096;");
                     }
 
-                    loadCategories()
-                      .then(loadArticles)
-                      .then(loadPendingComments)
-                      .catch((error) => setMessage(`Error inicializando admin: ${error.message}`));
+                    async function initAdmin() {
+                      try {
+                        await loadCategories();
+                      } catch (error) {
+                        setMessage(`Error cargando categorias: ${error.message}`);
+                      }
+                      try {
+                        await loadArticles();
+                      } catch (error) {
+                        setMessage(`Error cargando articulos: ${error.message}`);
+                      }
+                      try {
+                        await loadPendingComments();
+                      } catch (error) {
+                        setMessage(`Error cargando comentarios: ${error.message}`);
+                      }
+                    }
+
+                    initAdmin().catch((error) => setMessage(`Error inicializando admin: ${error.message}`));
                   </script>
                 </body>
                 </html>
