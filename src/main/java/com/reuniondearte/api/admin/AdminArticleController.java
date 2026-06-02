@@ -60,7 +60,7 @@ public class AdminArticleController {
         return AdminArticleResponse.from(
                 article,
                 seoMetadata.findByArticleId(article.getId()).orElse(null),
-                articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body")
+                articleMedia.findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(article.getId(), "body")
                         .stream()
                         .map(AdminArticleMediaResponse::from)
                         .toList()

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ArticleMediaRepository extends JpaRepository<ArticleMedia, Long> {
     @EntityGraph(attributePaths = {"mediaAsset"})
-    List<ArticleMedia> findByArticleIdAndRoleOrderBySortOrderAscIdAsc(Long articleId, String role);
+    List<ArticleMedia> findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(Long articleId, String role);
 
     @EntityGraph(attributePaths = {"mediaAsset"})
     Optional<ArticleMedia> findByIdAndArticleIdAndRole(Long id, Long articleId, String role);

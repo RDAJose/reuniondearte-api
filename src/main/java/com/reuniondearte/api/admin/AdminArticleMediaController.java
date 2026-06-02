@@ -146,7 +146,7 @@ public class AdminArticleMediaController {
     public List<AdminArticleMediaResponse> listBodyImages(@PathVariable Long id) {
         Article article = articles.findWithRelationsById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
-        return articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body").stream()
+        return articleMedia.findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(article.getId(), "body").stream()
                 .map(AdminArticleMediaResponse::from)
                 .toList();
     }

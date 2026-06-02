@@ -213,7 +213,7 @@ class ImportedArticleNormalizer {
         collectHtmlImages(article.getContentHtml(), "contentHtml", externalImages, r2ImageMap, ownMediaPublicUrls);
         MediaAsset cover = article.getCoverMedia();
         addStoredImage("coverMedia.publicUrl", cover, externalImages, r2ImageMap, ownMediaPublicUrls);
-        for (ArticleMedia bodyMedia : articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body")) {
+        for (ArticleMedia bodyMedia : articleMedia.findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(article.getId(), "body")) {
             addStoredImage("bodyMedia.publicUrl", bodyMedia.getMediaAsset(), externalImages, r2ImageMap, ownMediaPublicUrls);
         }
         for (Map.Entry<String, String> field : legacyImageFields.entrySet()) {
@@ -378,7 +378,7 @@ class ImportedArticleNormalizer {
             return article.getCoverMedia();
         }
         if ("body".equals(role)) {
-            List<ArticleMedia> bodyImages = articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body");
+            List<ArticleMedia> bodyImages = articleMedia.findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(article.getId(), "body");
             return bodyImages.size() == 1 ? bodyImages.getFirst().getMediaAsset() : null;
         }
         return null;
@@ -393,7 +393,7 @@ class ImportedArticleNormalizer {
         if (legalMetadataIncomplete(cover) && imageUrlKind(cover.getPublicUrl(), ownMediaPublicUrls) == ImageUrlKind.R2) {
             return true;
         }
-        return articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body").stream()
+        return articleMedia.findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(article.getId(), "body").stream()
                 .map(ArticleMedia::getMediaAsset)
                 .anyMatch(media -> legalMetadataIncomplete(media) && imageUrlKind(media.getPublicUrl(), ownMediaPublicUrls) == ImageUrlKind.R2);
     }
