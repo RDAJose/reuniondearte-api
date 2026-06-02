@@ -59,6 +59,7 @@ public class AdminUiController {
                     .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
                     .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
                     .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+                    .body-metadata { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
                     .comment-panel { margin-bottom: 18px; }
                     .comment-list { display: grid; gap: 10px; }
                     .comment-card { border: 1px solid var(--line); background: #fff; padding: 12px; }
@@ -183,8 +184,20 @@ public class AdminUiController {
                               <button type="submit">Importar cover</button>
                             </div>
                           </form>
-                          <h3 style="margin-top: 18px;">Imagenes del cuerpo</h3>
-                          <p class="hint">Recomendacion cuerpo: maximo 1200px de ancho, preferente webp. Despues de subir o importar, pega el snippet Markdown en Content markdown.</p>
+                          <h3 style="margin-top: 18px;">Im&aacute;genes de cuerpo</h3>
+                          <p class="hint">Recomendacion cuerpo: maximo 1200px de ancho, preferente webp. Despues de subir o importar, copia el snippet Markdown y pegalo en Content markdown.</p>
+                          <div class="body-metadata">
+                            <label for="bodyAltText">Alt text obligatorio</label>
+                            <input id="bodyAltText" name="bodyAltText" required>
+                            <label for="bodyCaption">Caption</label>
+                            <input id="bodyCaption" name="bodyCaption">
+                            <label for="bodyCredit">Credit</label>
+                            <input id="bodyCredit" name="bodyCredit">
+                            <label for="bodySourceUrl">Source URL</label>
+                            <input id="bodySourceUrl" name="bodySourceUrl">
+                            <label for="bodyRightsNotes">Rights notes</label>
+                            <textarea id="bodyRightsNotes" name="bodyRightsNotes"></textarea>
+                          </div>
                           <form id="bodyImageForm">
                             <label for="bodyImageFile">File</label>
                             <input id="bodyImageFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
@@ -196,6 +209,7 @@ public class AdminUiController {
                           <form id="bodyImportForm">
                             <label for="bodyImportUrl">Importar imagen de cuerpo desde URL</label>
                             <input id="bodyImportUrl" name="imageUrl" type="url" placeholder="https://...">
+                            <p class="notice">Importa solo im&aacute;genes propias, autorizadas, de prensa permitida, dominio p&uacute;blico o licencia compatible.</p>
                             <div class="toolbar" style="margin-top: 14px;">
                               <button type="submit">Importar imagen de cuerpo</button>
                             </div>
@@ -394,6 +408,15 @@ public class AdminUiController {
                       document.getElementById("bodyImageFile").value = "";
                       document.getElementById("bodyImportUrl").value = "";
                       document.getElementById("bodyFileHint").textContent = "";
+                      fillBodyImageMetadata(null);
+                    }
+
+                    function fillBodyImageMetadata(image) {
+                      document.getElementById("bodyAltText").value = image?.altText || "";
+                      document.getElementById("bodyCaption").value = image?.caption || "";
+                      document.getElementById("bodyCredit").value = image?.credit || "";
+                      document.getElementById("bodySourceUrl").value = image?.sourceUrl || "";
+                      document.getElementById("bodyRightsNotes").value = image?.rightsNotes || "";
                     }
 
                     function renderCurrentCover(cover) {
@@ -441,8 +464,10 @@ public class AdminUiController {
                         container.innerHTML = `<p class="empty">Sin imagenes del cuerpo asociadas.</p>`;
                         return;
                       }
-                      container.innerHTML = images.map((image, index) => `
-                        <div class="body-image">
+                      container.innerHTML = images.map((image, index) => {
+                        const snippetId = `snippet-${image.id || image.mediaAssetId}`;
+                        return `
+                        <div class="body-image" data-body-image-id="${image.id || ""}">
                           <h4 style="margin:0 0 8px;">Imagen de cuerpo ${index + 1}</h4>
                           <img class="image-preview" src="${escapeAttribute(image.publicUrl)}" alt="${escapeAttribute(image.altText || "")}">
                           <dl class="data-list">
@@ -452,19 +477,28 @@ public class AdminUiController {
                             <div><dt>Credit</dt><dd>${escapeHtml(image.credit || "-")}</dd></div>
                             <div><dt>Source URL</dt><dd>${linkOrDash(image.sourceUrl)}</dd></div>
                             <div><dt>Rights notes</dt><dd>${escapeHtml(image.rightsNotes || "-")}</dd></div>
+                            <div><dt>Active</dt><dd>${image.active === false ? "no" : "yes"}</dd></div>
+                            <div><dt>Created at</dt><dd>${formatDate(image.createdAt)}</dd></div>
                             <div><dt>Peso</dt><dd>${formatBytes(image.size_bytes)}${imageSizeLabel(image)}</dd></div>
                           </dl>
-                          <label for="snippet-${image.mediaAssetId}">Snippet Markdown</label>
-                          <textarea id="snippet-${image.mediaAssetId}" class="snippet" readonly>${escapeHtml(image.markdownSnippet || "")}</textarea>
-                          <div class="toolbar"><button type="button" class="secondary" data-copy="${image.mediaAssetId}">Copiar snippet</button></div>
+                          <label for="${snippetId}">Snippet Markdown</label>
+                          <textarea id="${snippetId}" class="snippet" readonly>${escapeHtml(image.markdownSnippet || "")}</textarea>
+                          <div class="toolbar">
+                            <button type="button" class="secondary" data-copy="${snippetId}">Copiar snippet</button>
+                            <button type="button" class="danger" data-remove-body-image="${image.id || ""}" ${image.id ? "" : "disabled"}>Quitar del articulo</button>
+                          </div>
                         </div>
-                      `).join("");
+                      `;
+                      }).join("");
                       container.querySelectorAll("[data-copy]").forEach((button) => {
                         button.addEventListener("click", async () => {
-                          const textarea = document.getElementById(`snippet-${button.dataset.copy}`);
+                          const textarea = document.getElementById(button.dataset.copy);
                           await navigator.clipboard.writeText(textarea.value);
                           setMessage("Snippet Markdown copiado.");
                         });
+                      });
+                      container.querySelectorAll("[data-remove-body-image]").forEach((button) => {
+                        button.addEventListener("click", () => removeBodyImage(button.dataset.removeBodyImage));
                       });
                     }
 
@@ -617,7 +651,7 @@ public class AdminUiController {
                       event.preventDefault();
                       if (!state.current) return;
                       const file = document.getElementById("bodyImageFile").files[0];
-                      const metadata = imageMetadata();
+                      const metadata = bodyImageMetadata();
                       if (!file || !metadata.altText) {
                         setMessage("Selecciona una imagen de cuerpo y escribe altText.");
                         return;
@@ -628,7 +662,8 @@ public class AdminUiController {
                       setMessage("Subiendo imagen de cuerpo...");
                       try {
                         const result = await api(`/api/admin/articles/${state.current.id}/body-images`, { method: "POST", body: formData });
-                        setMessage(`Imagen de cuerpo guardada. Snippet: ${result.publicUrl}`);
+                        fillBodyImageMetadata(null);
+                        setMessage(`Imagen de cuerpo guardada. Snippet disponible para copiar.`);
                         await openArticle(state.current.id);
                       } catch (error) {
                         setMessage(`Error subiendo imagen de cuerpo: ${error.message}`);
@@ -638,15 +673,30 @@ public class AdminUiController {
                     async function importBodyImage(event) {
                       event.preventDefault();
                       if (!state.current) return;
-                      const body = importPayload("bodyImportUrl");
+                      const body = importPayload("bodyImportUrl", bodyImageMetadata());
                       if (!body) return;
                       setMessage("Importando imagen de cuerpo...");
                       try {
                         const result = await api(`/api/admin/articles/${state.current.id}/body-images/import`, { method: "POST", body: JSON.stringify(body) });
+                        fillBodyImageMetadata(null);
                         setMessage(`Imagen de cuerpo importada. Snippet disponible para copiar.`);
                         await openArticle(state.current.id);
                       } catch (error) {
                         setMessage(`Error importando imagen de cuerpo: ${error.message}`);
+                      }
+                    }
+
+                    async function removeBodyImage(articleMediaId) {
+                      if (!state.current || !articleMediaId) return;
+                      const confirmed = confirm("Quitar esta imagen del cuerpo solo la desasociara del articulo. No borrara el fichero fisico de storage. Â¿Continuar?");
+                      if (!confirmed) return;
+                      setMessage("Quitando imagen de cuerpo...");
+                      try {
+                        await api(`/api/admin/articles/${state.current.id}/body-images/${articleMediaId}`, { method: "DELETE" });
+                        await openArticle(state.current.id);
+                        setMessage("Imagen de cuerpo quitada. El fichero de storage se conserva.");
+                      } catch (error) {
+                        setMessage(`Error quitando imagen de cuerpo: ${error.message}`);
                       }
                     }
 
@@ -660,9 +710,18 @@ public class AdminUiController {
                       };
                     }
 
-                    function importPayload(inputId) {
+                    function bodyImageMetadata() {
+                      return {
+                        altText: document.getElementById("bodyAltText").value.trim(),
+                        caption: document.getElementById("bodyCaption").value.trim(),
+                        credit: document.getElementById("bodyCredit").value.trim(),
+                        sourceUrl: document.getElementById("bodySourceUrl").value.trim(),
+                        rightsNotes: document.getElementById("bodyRightsNotes").value.trim(),
+                      };
+                    }
+
+                    function importPayload(inputId, metadata = imageMetadata()) {
                       const imageUrl = document.getElementById(inputId).value.trim();
-                      const metadata = imageMetadata();
                       const lowerImageUrl = imageUrl.toLowerCase();
                       if (!imageUrl || (!lowerImageUrl.startsWith("http://") && !lowerImageUrl.startsWith("https://"))) {
                         setMessage("La URL de importacion debe ser http o https.");

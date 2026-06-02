@@ -50,6 +50,10 @@ public class ArticleMedia {
         return sortOrder;
     }
 
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
     public static ArticleMedia create(Article article, MediaAsset mediaAsset, String role, Integer sortOrder) {
         ArticleMedia articleMedia = new ArticleMedia();
         articleMedia.article = article;

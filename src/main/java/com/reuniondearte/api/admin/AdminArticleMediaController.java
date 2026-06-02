@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -141,6 +142,15 @@ public class AdminArticleMediaController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}/body-images")
+    public List<AdminArticleMediaResponse> listBodyImages(@PathVariable Long id) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        return articleMedia.findByArticleIdAndRoleOrderBySortOrderAscIdAsc(article.getId(), "body").stream()
+                .map(AdminArticleMediaResponse::from)
+                .toList();
+    }
+
     @PostMapping(value = "/{id}/body-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     public AdminArticleMediaResponse uploadBodyImage(
@@ -179,6 +189,20 @@ public class AdminArticleMediaController {
         MediaAsset savedMediaAsset = saveMediaAsset(storedImage, request);
         ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "body", sortOrder));
         return AdminArticleMediaResponse.from(savedArticleMedia);
+    }
+
+    @DeleteMapping("/{id}/body-images/{articleMediaId}")
+    @Transactional
+    public ResponseEntity<Void> removeBodyImage(
+            @PathVariable Long id,
+            @PathVariable Long articleMediaId
+    ) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        ArticleMedia association = articleMedia.findByIdAndArticleIdAndRole(articleMediaId, article.getId(), "body")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Body image not found"));
+        articleMedia.delete(association);
+        return ResponseEntity.noContent().build();
     }
 
     private MediaAsset saveMediaAsset(MediaStorageService.StoredImage storedImage, AdminImageImportRequest request) {

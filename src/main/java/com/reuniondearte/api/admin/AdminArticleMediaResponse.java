@@ -3,8 +3,10 @@ package com.reuniondearte.api.admin;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.reuniondearte.api.media.ArticleMedia;
 import com.reuniondearte.api.media.MediaAsset;
+import java.time.OffsetDateTime;
 
 public record AdminArticleMediaResponse(
+        Long id,
         Long mediaAssetId,
         String publicUrl,
         String altText,
@@ -18,10 +20,13 @@ public record AdminArticleMediaResponse(
         @JsonProperty("size_bytes") Long sizeBytes,
         Integer width,
         Integer height,
+        Boolean active,
+        OffsetDateTime createdAt,
         String markdownSnippet
 ) {
     static AdminArticleMediaResponse from(MediaAsset mediaAsset) {
         return new AdminArticleMediaResponse(
+                null,
                 mediaAsset.getId(),
                 mediaAsset.getPublicUrl(),
                 mediaAsset.getAltText(),
@@ -35,12 +40,33 @@ public record AdminArticleMediaResponse(
                 mediaAsset.getSizeBytes(),
                 mediaAsset.getWidth(),
                 mediaAsset.getHeight(),
+                true,
+                null,
                 markdownSnippet(mediaAsset)
         );
     }
 
     static AdminArticleMediaResponse from(ArticleMedia articleMedia) {
-        return from(articleMedia.getMediaAsset());
+        MediaAsset mediaAsset = articleMedia.getMediaAsset();
+        return new AdminArticleMediaResponse(
+                articleMedia.getId(),
+                mediaAsset.getId(),
+                mediaAsset.getPublicUrl(),
+                mediaAsset.getAltText(),
+                mediaAsset.getCaption(),
+                mediaAsset.getCredit(),
+                mediaAsset.getSourceUrl(),
+                mediaAsset.getRightsNotes(),
+                mediaAsset.getStoragePath(),
+                mediaAsset.getFilename(),
+                mediaAsset.getMimeType(),
+                mediaAsset.getSizeBytes(),
+                mediaAsset.getWidth(),
+                mediaAsset.getHeight(),
+                true,
+                articleMedia.getCreatedAt(),
+                markdownSnippet(mediaAsset)
+        );
     }
 
     private static String markdownSnippet(MediaAsset mediaAsset) {
@@ -57,7 +83,7 @@ public record AdminArticleMediaResponse(
                 if (!caption.isBlank()) {
                     snippet.append(". ");
                 }
-                snippet.append("Credito: ").append(credit);
+                snippet.append("Cr\u00e9dito: ").append(credit);
             }
             snippet.append(".*");
         }
