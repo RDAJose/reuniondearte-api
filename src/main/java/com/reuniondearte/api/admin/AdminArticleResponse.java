@@ -21,13 +21,23 @@ public record AdminArticleResponse(
         @JsonProperty("meta_description") String metaDescription,
         Boolean noindex,
         AdminArticleCoverResponse cover,
-        List<AdminArticleMediaResponse> bodyImages
+        List<AdminArticleMediaResponse> bodyImages,
+        List<AdminArticleMediaFileResponse> mediaFiles
 ) {
     public static AdminArticleResponse from(Article article, SeoMetadata seo) {
-        return from(article, seo, List.of());
+        return from(article, seo, List.of(), List.of());
     }
 
     public static AdminArticleResponse from(Article article, SeoMetadata seo, List<AdminArticleMediaResponse> bodyImages) {
+        return from(article, seo, bodyImages, List.of());
+    }
+
+    public static AdminArticleResponse from(
+            Article article,
+            SeoMetadata seo,
+            List<AdminArticleMediaResponse> bodyImages,
+            List<AdminArticleMediaFileResponse> mediaFiles
+    ) {
         return new AdminArticleResponse(
                 article.getId(),
                 article.getTitle(),
@@ -42,7 +52,8 @@ public record AdminArticleResponse(
                 seo == null ? null : seo.getMetaDescription(),
                 seo != null && Boolean.TRUE.equals(seo.getNoindex()),
                 article.getCoverMedia() == null ? null : AdminArticleCoverResponse.from(article, article.getCoverMedia()),
-                bodyImages
+                bodyImages,
+                mediaFiles
         );
     }
 }

@@ -30,6 +30,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/articles")
 public class AdminArticleController {
+    private static final List<String> MEDIA_FILE_ROLES = List.of("audio", "video");
+
     private final ArticleRepository articles;
     private final CategoryRepository categories;
     private final SeoMetadataRepository seoMetadata;
@@ -63,6 +65,10 @@ public class AdminArticleController {
                 articleMedia.findByArticleIdAndRoleOrderByCreatedAtAscIdAsc(article.getId(), "body")
                         .stream()
                         .map(AdminArticleMediaResponse::from)
+                        .toList(),
+                articleMedia.findByArticleIdAndRoleInOrderByCreatedAtAscIdAsc(article.getId(), MEDIA_FILE_ROLES)
+                        .stream()
+                        .map(AdminArticleMediaFileResponse::from)
                         .toList()
         );
     }

@@ -60,6 +60,8 @@ public class AdminUiController {
                     .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
                     .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
                     .body-metadata { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
+                    .media-file { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+                    .media-metadata { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
                     .comment-panel { margin-bottom: 18px; }
                     .comment-list { display: grid; gap: 10px; }
                     .comment-card { border: 1px solid var(--line); background: #fff; padding: 12px; }
@@ -215,6 +217,37 @@ public class AdminUiController {
                             </div>
                           </form>
                           <div id="bodyImages"></div>
+                          <h3 style="margin-top: 18px;">Audio y v&iacute;deo</h3>
+                          <p class="notice">Sube solo audio o v&iacute;deo propio, autorizado, de prensa permitida, dominio p&uacute;blico o con licencia compatible. Para trailers o entrevistas externas, es preferible insertar el enlace oficial de YouTube/Vimeo en el Markdown.</p>
+                          <div class="media-metadata">
+                            <label for="mediaTitle">Title</label>
+                            <input id="mediaTitle" name="mediaTitle">
+                            <label for="mediaCaption">Caption / description</label>
+                            <input id="mediaCaption" name="mediaCaption">
+                            <label for="mediaCredit">Credit</label>
+                            <input id="mediaCredit" name="mediaCredit">
+                            <label for="mediaSourceUrl">Source URL</label>
+                            <input id="mediaSourceUrl" name="mediaSourceUrl">
+                            <label for="mediaRightsNotes">Rights notes</label>
+                            <textarea id="mediaRightsNotes" name="mediaRightsNotes"></textarea>
+                          </div>
+                          <form id="mediaAudioForm">
+                            <label for="mediaAudioFile">Archivo de audio</label>
+                            <input id="mediaAudioFile" name="file" type="file" accept=".mp3,.m4a,.wav,.ogg,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg">
+                            <p id="mediaAudioFileHint" class="hint"></p>
+                            <div class="toolbar" style="margin-top: 14px;">
+                              <button type="submit">Subir audio</button>
+                            </div>
+                          </form>
+                          <form id="mediaVideoForm">
+                            <label for="mediaVideoFile">Archivo de v&iacute;deo</label>
+                            <input id="mediaVideoFile" name="file" type="file" accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime">
+                            <p id="mediaVideoFileHint" class="hint"></p>
+                            <div class="toolbar" style="margin-top: 14px;">
+                              <button type="submit">Subir v&iacute;deo</button>
+                            </div>
+                          </form>
+                          <div id="mediaFiles"></div>
                           <h3 style="margin-top: 18px;">API publica</h3>
                           <a id="publicApiLink" class="public-link" href="#" target="_blank" rel="noreferrer"></a>
                         </div>
@@ -233,6 +266,8 @@ public class AdminUiController {
                     const coverImportForm = document.getElementById("coverImportForm");
                     const bodyImageForm = document.getElementById("bodyImageForm");
                     const bodyImportForm = document.getElementById("bodyImportForm");
+                    const mediaAudioForm = document.getElementById("mediaAudioForm");
+                    const mediaVideoForm = document.getElementById("mediaVideoForm");
                     const categorySelect = document.getElementById("category");
 
                     document.querySelectorAll("[data-status]").forEach((button) => {
@@ -255,8 +290,12 @@ public class AdminUiController {
                     coverImportForm.addEventListener("submit", importCover);
                     bodyImageForm.addEventListener("submit", uploadBodyImage);
                     bodyImportForm.addEventListener("submit", importBodyImage);
+                    mediaAudioForm.addEventListener("submit", (event) => uploadMediaFile(event, "audio"));
+                    mediaVideoForm.addEventListener("submit", (event) => uploadMediaFile(event, "video"));
                     document.getElementById("coverFile").addEventListener("change", (event) => showFileHint(event, "coverFileHint"));
                     document.getElementById("bodyImageFile").addEventListener("change", (event) => showFileHint(event, "bodyFileHint"));
+                    document.getElementById("mediaAudioFile").addEventListener("change", (event) => showMediaFileHint(event, "mediaAudioFileHint", 100));
+                    document.getElementById("mediaVideoFile").addEventListener("change", (event) => showMediaFileHint(event, "mediaVideoFileHint", 250));
 
                     async function api(path, options = {}) {
                       const response = await fetch(path, {
@@ -392,6 +431,7 @@ public class AdminUiController {
                       renderCoverWarnings(article.cover);
                       renderCurrentCover(article.cover);
                       renderBodyImages(article.bodyImages || []);
+                      renderMediaFiles(article.mediaFiles || []);
                       document.getElementById("removeCoverButton").disabled = !article.cover;
                       document.getElementById("deleteArticleButton").disabled = article.status === "published";
                     }
@@ -409,6 +449,11 @@ public class AdminUiController {
                       document.getElementById("bodyImportUrl").value = "";
                       document.getElementById("bodyFileHint").textContent = "";
                       fillBodyImageMetadata(null);
+                      fillMediaFileMetadata(null);
+                      document.getElementById("mediaAudioFile").value = "";
+                      document.getElementById("mediaVideoFile").value = "";
+                      document.getElementById("mediaAudioFileHint").textContent = "";
+                      document.getElementById("mediaVideoFileHint").textContent = "";
                     }
 
                     function fillBodyImageMetadata(image) {
@@ -417,6 +462,14 @@ public class AdminUiController {
                       document.getElementById("bodyCredit").value = image?.credit || "";
                       document.getElementById("bodySourceUrl").value = image?.sourceUrl || "";
                       document.getElementById("bodyRightsNotes").value = image?.rightsNotes || "";
+                    }
+
+                    function fillMediaFileMetadata(file) {
+                      document.getElementById("mediaTitle").value = file?.title || "";
+                      document.getElementById("mediaCaption").value = file?.caption || "";
+                      document.getElementById("mediaCredit").value = file?.credit || "";
+                      document.getElementById("mediaSourceUrl").value = file?.sourceUrl || "";
+                      document.getElementById("mediaRightsNotes").value = file?.rightsNotes || "";
                     }
 
                     function renderCurrentCover(cover) {
@@ -499,6 +552,50 @@ public class AdminUiController {
                       });
                       container.querySelectorAll("[data-remove-body-image]").forEach((button) => {
                         button.addEventListener("click", () => removeBodyImage(button.dataset.removeBodyImage));
+                      });
+                    }
+
+                    function renderMediaFiles(files) {
+                      const container = document.getElementById("mediaFiles");
+                      if (!files.length) {
+                        container.innerHTML = `<p class="empty">Sin audio ni video asociado.</p>`;
+                        return;
+                      }
+                      container.innerHTML = files.map((file, index) => {
+                        const snippetId = `media-snippet-${file.id || file.mediaAssetId}`;
+                        const kindLabel = file.kind === "audio" ? "Audio" : "Video";
+                        return `
+                        <div class="media-file" data-media-file-id="${file.id || ""}">
+                          <h4 style="margin:0 0 8px;">${kindLabel} ${index + 1}</h4>
+                          <dl class="data-list">
+                            <div><dt>Tipo</dt><dd>${escapeHtml(file.kind || "-")}</dd></div>
+                            <div><dt>Titulo</dt><dd>${escapeHtml(file.title || "-")}</dd></div>
+                            <div><dt>URL publica</dt><dd><a class="public-link" href="${escapeAttribute(file.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(file.publicUrl)}</a></dd></div>
+                            <div><dt>Caption / description</dt><dd>${escapeHtml(file.caption || "-")}</dd></div>
+                            <div><dt>Credit</dt><dd>${escapeHtml(file.credit || "-")}</dd></div>
+                            <div><dt>Source URL</dt><dd>${linkOrDash(file.sourceUrl)}</dd></div>
+                            <div><dt>Rights notes</dt><dd>${escapeHtml(file.rightsNotes || "-")}</dd></div>
+                            <div><dt>Active</dt><dd>${file.active === false ? "no" : "yes"}</dd></div>
+                            <div><dt>Created at</dt><dd>${formatDate(file.createdAt)}</dd></div>
+                          </dl>
+                          <label for="${snippetId}">Snippet Markdown</label>
+                          <textarea id="${snippetId}" class="snippet" readonly>${escapeHtml(file.markdownSnippet || "")}</textarea>
+                          <div class="toolbar">
+                            <button type="button" class="secondary" data-copy="${snippetId}">Copiar snippet</button>
+                            <button type="button" class="danger" data-remove-media-file="${file.id || ""}" ${file.id ? "" : "disabled"}>Quitar del articulo</button>
+                          </div>
+                        </div>
+                      `;
+                      }).join("");
+                      container.querySelectorAll("[data-copy]").forEach((button) => {
+                        button.addEventListener("click", async () => {
+                          const textarea = document.getElementById(button.dataset.copy);
+                          await navigator.clipboard.writeText(textarea.value);
+                          setMessage("Snippet Markdown copiado.");
+                        });
+                      });
+                      container.querySelectorAll("[data-remove-media-file]").forEach((button) => {
+                        button.addEventListener("click", () => removeMediaFile(button.dataset.removeMediaFile));
                       });
                     }
 
@@ -700,6 +797,45 @@ public class AdminUiController {
                       }
                     }
 
+                    async function uploadMediaFile(event, kind) {
+                      event.preventDefault();
+                      if (!state.current) return;
+                      const inputId = kind === "audio" ? "mediaAudioFile" : "mediaVideoFile";
+                      const file = document.getElementById(inputId).files[0];
+                      if (!file) {
+                        setMessage(kind === "audio" ? "Selecciona un archivo de audio." : "Selecciona un archivo de video.");
+                        return;
+                      }
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      appendMediaMetadata(formData, mediaFileMetadata());
+                      setMessage(kind === "audio" ? "Subiendo audio..." : "Subiendo video...");
+                      try {
+                        await api(`/api/admin/articles/${state.current.id}/media-files/${kind}`, { method: "POST", body: formData });
+                        fillMediaFileMetadata(null);
+                        document.getElementById(inputId).value = "";
+                        document.getElementById(kind === "audio" ? "mediaAudioFileHint" : "mediaVideoFileHint").textContent = "";
+                        await openArticle(state.current.id);
+                        setMessage(kind === "audio" ? "Audio guardado. Snippet disponible para copiar." : "Video guardado. Snippet disponible para copiar.");
+                      } catch (error) {
+                        setMessage(`${kind === "audio" ? "Error subiendo audio" : "Error subiendo video"}: ${error.message}`);
+                      }
+                    }
+
+                    async function removeMediaFile(articleMediaId) {
+                      if (!state.current || !articleMediaId) return;
+                      const confirmed = confirm("Quitar este audio/video solo lo desasociara del articulo. No borrara el fichero fisico de storage. Â¿Continuar?");
+                      if (!confirmed) return;
+                      setMessage("Quitando audio/video...");
+                      try {
+                        await api(`/api/admin/articles/${state.current.id}/media-files/${articleMediaId}`, { method: "DELETE" });
+                        await openArticle(state.current.id);
+                        setMessage("Audio/video quitado. El fichero de storage se conserva.");
+                      } catch (error) {
+                        setMessage(`Error quitando audio/video: ${error.message}`);
+                      }
+                    }
+
                     function imageMetadata() {
                       return {
                         altText: document.getElementById("altText").value.trim(),
@@ -720,6 +856,16 @@ public class AdminUiController {
                       };
                     }
 
+                    function mediaFileMetadata() {
+                      return {
+                        title: document.getElementById("mediaTitle").value.trim(),
+                        caption: document.getElementById("mediaCaption").value.trim(),
+                        credit: document.getElementById("mediaCredit").value.trim(),
+                        sourceUrl: document.getElementById("mediaSourceUrl").value.trim(),
+                        rightsNotes: document.getElementById("mediaRightsNotes").value.trim(),
+                      };
+                    }
+
                     function importPayload(inputId, metadata = imageMetadata()) {
                       const imageUrl = document.getElementById(inputId).value.trim();
                       const lowerImageUrl = imageUrl.toLowerCase();
@@ -736,6 +882,14 @@ public class AdminUiController {
 
                     function appendMetadata(formData, metadata) {
                       formData.append("altText", metadata.altText);
+                      appendIfPresent(formData, "caption", metadata.caption);
+                      appendIfPresent(formData, "credit", metadata.credit);
+                      appendIfPresent(formData, "sourceUrl", metadata.sourceUrl);
+                      appendIfPresent(formData, "rightsNotes", metadata.rightsNotes);
+                    }
+
+                    function appendMediaMetadata(formData, metadata) {
+                      appendIfPresent(formData, "title", metadata.title);
                       appendIfPresent(formData, "caption", metadata.caption);
                       appendIfPresent(formData, "credit", metadata.credit);
                       appendIfPresent(formData, "sourceUrl", metadata.sourceUrl);
@@ -762,6 +916,18 @@ public class AdminUiController {
                       const warnings = [];
                       if (file.size > 8 * 1024 * 1024) warnings.push("supera el limite backend de 8 MB");
                       if (file.size > 400 * 1024) warnings.push("para cover, intenta optimizar por debajo de 400 KB si es viable");
+                      target.textContent = `${file.name} - ${formatBytes(file.size)}${warnings.length ? " - Aviso: " + warnings.join("; ") : ""}`;
+                    }
+
+                    function showMediaFileHint(event, targetId, maxMb) {
+                      const file = event.target.files[0];
+                      const target = document.getElementById(targetId);
+                      if (!file) {
+                        target.textContent = "";
+                        return;
+                      }
+                      const warnings = [];
+                      if (file.size > maxMb * 1024 * 1024) warnings.push(`supera el limite backend de ${maxMb} MB`);
                       target.textContent = `${file.name} - ${formatBytes(file.size)}${warnings.length ? " - Aviso: " + warnings.join("; ") : ""}`;
                     }
 

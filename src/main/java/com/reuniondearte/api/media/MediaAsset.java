@@ -39,6 +39,9 @@ public class MediaAsset {
     private String altText;
 
     @Column(columnDefinition = "TEXT")
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
     private String caption;
 
     @Column(columnDefinition = "TEXT")
@@ -63,6 +66,14 @@ public class MediaAsset {
 
     public String getAltText() {
         return altText;
+    }
+
+    public String getMediaType() {
+        return mediaType;
+    }
+
+    public String getTitle() {
+        return title;
     }
 
     public String getCaption() {
@@ -130,6 +141,7 @@ public class MediaAsset {
         this.width = width;
         this.height = height;
         this.altText = altText;
+        this.title = null;
         this.caption = caption;
         this.credit = credit;
         this.sourceUrl = sourceUrl;
@@ -166,6 +178,43 @@ public class MediaAsset {
         this.width = width;
         this.height = height;
         this.altText = altText;
+        this.title = null;
+        this.caption = caption;
+        this.credit = credit;
+        this.sourceUrl = sourceUrl;
+        this.rightsNotes = rightsNotes;
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
+    }
+
+    public void applyStoredMediaFile(
+            String mediaType,
+            String storageProvider,
+            String storagePath,
+            String publicUrl,
+            String filename,
+            String mimeType,
+            Long sizeBytes,
+            String title,
+            String caption,
+            String credit,
+            String sourceUrl,
+            String rightsNotes
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.mediaType = mediaType;
+        this.storageProvider = storageProvider;
+        this.storagePath = storagePath;
+        this.publicUrl = publicUrl;
+        this.filename = filename;
+        this.mimeType = mimeType;
+        this.sizeBytes = sizeBytes;
+        this.width = null;
+        this.height = null;
+        this.altText = null;
+        this.title = title;
         this.caption = caption;
         this.credit = credit;
         this.sourceUrl = sourceUrl;

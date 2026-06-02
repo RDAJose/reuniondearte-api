@@ -8,6 +8,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import javax.imageio.ImageIO;
@@ -19,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class MediaStorageService {
     private static final long MAX_UPLOAD_BYTES = 8L * 1024L * 1024L;
+    private static final long MAX_AUDIO_UPLOAD_BYTES = 100L * 1024L * 1024L;
+    private static final long MAX_VIDEO_UPLOAD_BYTES = 250L * 1024L * 1024L;
     private static final Map<String, String> MIME_BY_EXTENSION = Map.of(
             "jpg", "image/jpeg",
             "jpeg", "image/jpeg",
@@ -31,6 +34,23 @@ public class MediaStorageService {
             "image/png", "png",
             "image/webp", "webp",
             "image/avif", "avif"
+    );
+    private static final Map<String, String> AUDIO_MIME_BY_EXTENSION = Map.of(
+            "mp3", "audio/mpeg",
+            "m4a", "audio/mp4",
+            "wav", "audio/wav",
+            "ogg", "audio/ogg"
+    );
+    private static final Map<String, List<String>> AUDIO_ALLOWED_MIME_BY_EXTENSION = Map.of(
+            "mp3", List.of("audio/mpeg"),
+            "m4a", List.of("audio/mp4", "audio/x-m4a"),
+            "wav", List.of("audio/wav"),
+            "ogg", List.of("audio/ogg")
+    );
+    private static final Map<String, String> VIDEO_MIME_BY_EXTENSION = Map.of(
+            "mp4", "video/mp4",
+            "webm", "video/webm",
+            "mov", "video/quicktime"
     );
 
     private final MediaStorageProvider storageProvider;
@@ -73,6 +93,33 @@ public class MediaStorageService {
         }
         ImageSize imageSize = readImageSize(imageBytes, extension);
         return storeImageBytes(articleSlug, safeFilenameBase(filenameBase), extension, expectedMimeType, imageBytes, imageSize);
+    }
+
+    public StoredFile storeArticleAudio(String articleSlug, String filenameBase, MultipartFile file) {
+        return storeArticleMediaFile(
+                articleSlug,
+                "audio",
+                filenameBase,
+                file,
+                AUDIO_MIME_BY_EXTENSION,
+                AUDIO_ALLOWED_MIME_BY_EXTENSION,
+                MAX_AUDIO_UPLOAD_BYTES,
+                "Audio file exceeds 100 MB"
+        );
+    }
+
+    public StoredFile storeArticleVideo(String articleSlug, String filenameBase, MultipartFile file) {
+        return storeArticleMediaFile(
+                articleSlug,
+                "video",
+                filenameBase,
+                file,
+                VIDEO_MIME_BY_EXTENSION,
+                VIDEO_MIME_BY_EXTENSION.entrySet().stream()
+                        .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> List.of(entry.getValue()))),
+                MAX_VIDEO_UPLOAD_BYTES,
+                "Video file exceeds 250 MB"
+        );
     }
 
     public StoredImage importArticleImage(String articleSlug, String filenameBase, String imageUrl) {
@@ -145,6 +192,68 @@ public class MediaStorageService {
                 storedObject.sizeBytes(),
                 imageSize.width(),
                 imageSize.height()
+        );
+    }
+
+    private StoredFile storeArticleMediaFile(
+            String articleSlug,
+            String mediaType,
+            String filenameBase,
+            MultipartFile file,
+            Map<String, String> preferredMimeByExtension,
+            Map<String, List<String>> allowedMimeByExtension,
+            long maxUploadBytes,
+            String tooLargeMessage
+    ) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mediaType + " file is required");
+        }
+        if (file.getSize() > maxUploadBytes) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, tooLargeMessage);
+        }
+
+        String extension = extension(file.getOriginalFilename());
+        String preferredMimeType = preferredMimeByExtension.get(extension);
+        List<String> allowedMimeTypes = allowedMimeByExtension.get(extension);
+        if (preferredMimeType == null || allowedMimeTypes == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported " + mediaType + " file extension");
+        }
+        String contentType = normalize(file.getContentType());
+        if (contentType != null && contentType.contains(";")) {
+            contentType = contentType.substring(0, contentType.indexOf(';')).trim();
+        }
+        if (contentType != null && !allowedMimeTypes.contains(contentType)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mediaType + " MIME type does not match file extension");
+        }
+
+        return storeFileStream(articleSlug, mediaType + "s", safeFilenameBase(filenameBase), extension, preferredMimeType, file);
+    }
+
+    private StoredFile storeFileStream(
+            String articleSlug,
+            String directory,
+            String filenameBase,
+            String extension,
+            String mimeType,
+            MultipartFile file
+    ) {
+        String safeSlug = safeSlug(articleSlug);
+        String filename = filenameBase + "." + extension;
+        String storagePath = "articles/" + safeSlug + "/" + directory + "/" + filename;
+        MediaStorageProvider.StoredObject storedObject;
+        try (InputStream inputStream = file.getInputStream()) {
+            storedObject = storageProvider.store(storagePath, filename, mimeType, file.getSize(), inputStream);
+        } catch (IOException exception) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not store media file", exception);
+        }
+
+        return new StoredFile(
+                storedObject.storageProvider(),
+                storedObject.storagePath(),
+                storedObject.publicUrl(),
+                storedObject.filename(),
+                storedObject.mimeType(),
+                storedObject.sizeBytes()
         );
     }
 
@@ -226,6 +335,16 @@ public class MediaStorageService {
             Long sizeBytes,
             Integer width,
             Integer height
+    ) {
+    }
+
+    public record StoredFile(
+            String storageProvider,
+            String storagePath,
+            String publicUrl,
+            String filename,
+            String mimeType,
+            Long sizeBytes
     ) {
     }
 }

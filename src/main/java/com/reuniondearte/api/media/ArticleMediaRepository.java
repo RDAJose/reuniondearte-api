@@ -12,6 +12,12 @@ public interface ArticleMediaRepository extends JpaRepository<ArticleMedia, Long
     @EntityGraph(attributePaths = {"mediaAsset"})
     Optional<ArticleMedia> findByIdAndArticleIdAndRole(Long id, Long articleId, String role);
 
+    @EntityGraph(attributePaths = {"mediaAsset"})
+    List<ArticleMedia> findByArticleIdAndRoleInOrderByCreatedAtAscIdAsc(Long articleId, List<String> roles);
+
+    @EntityGraph(attributePaths = {"mediaAsset"})
+    Optional<ArticleMedia> findByIdAndArticleIdAndRoleIn(Long id, Long articleId, List<String> roles);
+
     int countByArticleIdAndRole(Long articleId, String role);
 
     void deleteByArticleIdAndRoleIn(Long articleId, List<String> roles);

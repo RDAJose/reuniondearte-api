@@ -32,6 +32,7 @@ import java.util.List;
 public class AdminArticleMediaController {
     private static final String FEATURED_ROLE = "ARTICLE_FEATURED";
     private static final List<String> FEATURED_ROLES = List.of("ARTICLE_FEATURED", "featured", "cover");
+    private static final List<String> MEDIA_FILE_ROLES = List.of("audio", "video");
 
     private final ArticleRepository articles;
     private final MediaAssetRepository mediaAssets;
@@ -205,6 +206,69 @@ public class AdminArticleMediaController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}/media-files")
+    public List<AdminArticleMediaFileResponse> listMediaFiles(@PathVariable Long id) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        return articleMedia.findByArticleIdAndRoleInOrderByCreatedAtAscIdAsc(article.getId(), MEDIA_FILE_ROLES).stream()
+                .map(AdminArticleMediaFileResponse::from)
+                .toList();
+    }
+
+    @PostMapping(value = "/{id}/media-files/audio", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public AdminArticleMediaFileResponse uploadAudioFile(
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String caption,
+            @RequestParam(required = false) String credit,
+            @RequestParam(required = false) String sourceUrl,
+            @RequestParam(required = false) String rightsNotes
+    ) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        int sortOrder = articleMedia.countByArticleIdAndRole(article.getId(), "audio");
+        MediaStorageService.StoredFile storedFile = mediaStorage.storeArticleAudio(article.getSlug(), mediaFilenameBase("audio", sortOrder), file);
+        MediaAsset savedMediaAsset = saveMediaFileAsset(storedFile, "audio", title, caption, credit, sourceUrl, rightsNotes);
+        ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "audio", sortOrder));
+        return AdminArticleMediaFileResponse.from(savedArticleMedia);
+    }
+
+    @PostMapping(value = "/{id}/media-files/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public AdminArticleMediaFileResponse uploadVideoFile(
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String caption,
+            @RequestParam(required = false) String credit,
+            @RequestParam(required = false) String sourceUrl,
+            @RequestParam(required = false) String rightsNotes
+    ) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        int sortOrder = articleMedia.countByArticleIdAndRole(article.getId(), "video");
+        MediaStorageService.StoredFile storedFile = mediaStorage.storeArticleVideo(article.getSlug(), mediaFilenameBase("video", sortOrder), file);
+        MediaAsset savedMediaAsset = saveMediaFileAsset(storedFile, "video", title, caption, credit, sourceUrl, rightsNotes);
+        ArticleMedia savedArticleMedia = articleMedia.save(ArticleMedia.create(article, savedMediaAsset, "video", sortOrder));
+        return AdminArticleMediaFileResponse.from(savedArticleMedia);
+    }
+
+    @DeleteMapping("/{id}/media-files/{articleMediaId}")
+    @Transactional
+    public ResponseEntity<Void> removeMediaFile(
+            @PathVariable Long id,
+            @PathVariable Long articleMediaId
+    ) {
+        Article article = articles.findWithRelationsById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found"));
+        ArticleMedia association = articleMedia.findByIdAndArticleIdAndRoleIn(articleMediaId, article.getId(), MEDIA_FILE_ROLES)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Media file not found"));
+        articleMedia.delete(association);
+        return ResponseEntity.noContent().build();
+    }
+
     private MediaAsset saveMediaAsset(MediaStorageService.StoredImage storedImage, AdminImageImportRequest request) {
         return saveMediaAsset(
                 storedImage,
@@ -241,6 +305,37 @@ public class AdminArticleMediaController {
                 blankToNull(rightsNotes)
         );
         return mediaAssets.save(mediaAsset);
+    }
+
+    private MediaAsset saveMediaFileAsset(
+            MediaStorageService.StoredFile storedFile,
+            String mediaType,
+            String title,
+            String caption,
+            String credit,
+            String sourceUrl,
+            String rightsNotes
+    ) {
+        MediaAsset mediaAsset = new MediaAsset();
+        mediaAsset.applyStoredMediaFile(
+                mediaType,
+                storedFile.storageProvider(),
+                storedFile.storagePath(),
+                storedFile.publicUrl(),
+                storedFile.filename(),
+                storedFile.mimeType(),
+                storedFile.sizeBytes(),
+                blankToNull(title),
+                blankToNull(caption),
+                blankToNull(credit),
+                blankToNull(sourceUrl),
+                blankToNull(rightsNotes)
+        );
+        return mediaAssets.save(mediaAsset);
+    }
+
+    private String mediaFilenameBase(String kind, int sortOrder) {
+        return kind + "-" + (sortOrder + 1) + "-" + System.currentTimeMillis();
     }
 
     private void replaceFeaturedAssociation(Article article, MediaAsset mediaAsset) {
