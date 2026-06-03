@@ -50,6 +50,7 @@ public class AdminUiController {
                     .image-status { display: inline-flex; margin: 4px 0 12px; border: 1px solid var(--line); background: var(--soft); padding: 6px 8px; font-size: 13px; font-weight: 700; }
                     .image-status.assigned { border-color: #166534; color: #166534; background: #f0fdf4; }
                     .image-preview { width: 100%; max-height: 220px; object-fit: cover; border: 1px solid var(--line); background: var(--soft); }
+                    .cover-preview { display: block; height: clamp(220px, 34vw, 420px); max-height: none; object-fit: contain; background: #e7e5e4; }
                     .data-list { display: grid; gap: 8px; margin: 8px 0 14px; font-size: 13px; }
                     .data-list div { display: grid; gap: 3px; }
                     .data-list dt { color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
@@ -482,7 +483,7 @@ public class AdminUiController {
                         return;
                       }
                       container.innerHTML = `
-                        <img class="image-preview" src="${escapeAttribute(cover.coverImage)}" alt="${escapeAttribute(cover.coverAlt || "")}">
+                        <img class="image-preview cover-preview" src="${escapeAttribute(cover.coverImage)}" alt="${escapeAttribute(cover.coverAlt || "")}">
                         <dl class="data-list">
                           <div><dt>URL publica</dt><dd><a class="public-link" href="${escapeAttribute(cover.coverImage)}" target="_blank" rel="noreferrer">${escapeHtml(cover.coverImage)}</a></dd></div>
                           <div><dt>Alt text</dt><dd>${escapeHtml(cover.coverAlt || "-")}</dd></div>
