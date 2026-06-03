@@ -41,12 +41,16 @@ public class S3MediaStorageProvider implements MediaStorageProvider {
 
     @Override
     public StoredObject store(String storagePath, String filename, String mimeType, long sizeBytes, InputStream inputStream) throws IOException {
-        PutObjectRequest request = PutObjectRequest.builder()
+        PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
                 .bucket(storageProperties.s3Bucket())
                 .key(storagePath)
                 .contentType(mimeType)
-                .contentLength(sizeBytes)
-                .build();
+                .contentLength(sizeBytes);
+        String cacheControl = storageProperties.s3CacheControl();
+        if (!isBlank(cacheControl)) {
+            requestBuilder.cacheControl(cacheControl.trim());
+        }
+        PutObjectRequest request = requestBuilder.build();
         s3Client.putObject(request, RequestBody.fromInputStream(inputStream, sizeBytes));
         return new StoredObject(providerName(), storagePath, publicBaseUrl() + "/" + storagePath, filename, mimeType, sizeBytes);
     }

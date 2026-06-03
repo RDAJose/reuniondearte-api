@@ -15,6 +15,7 @@ public record StorageProperties(
         String s3Bucket,
         String s3AccessKey,
         String s3SecretKey,
-        String s3PublicBaseUrl
+        String s3PublicBaseUrl,
+        String s3CacheControl
 ) {
 }

@@ -47,6 +47,7 @@ RDA_S3_BUCKET=reuniondearte-media
 RDA_S3_ACCESS_KEY=<access-key>
 RDA_S3_SECRET_KEY=<secret-key>
 RDA_S3_PUBLIC_BASE_URL=https://media.reuniondearte.com
+RDA_S3_CACHE_CONTROL=public, max-age=31536000
 ```
 
 No subas claves ni secretos al repositorio.
@@ -80,6 +81,7 @@ RDA_S3_BUCKET=<bucket>
 RDA_S3_ACCESS_KEY=<access-key>
 RDA_S3_SECRET_KEY=<secret-key>
 RDA_S3_PUBLIC_BASE_URL=https://<dominio-publico-media>
+RDA_S3_CACHE_CONTROL=public, max-age=31536000
 ```
 
 No uses en produccion:
@@ -158,3 +160,11 @@ curl -u "$RDA_ADMIN_USER:$RDA_ADMIN_PASSWORD" \
 ```
 
 Comprueba que `media_assets.storage_provider` queda como `s3` y que `public_url` apunta al dominio publico de R2.
+
+Comprueba tambien las cabeceras publicas de una imagen nueva:
+
+```bash
+curl -I https://<dominio-publico-media>/articles/<slug>/cover.png
+```
+
+La respuesta debe incluir `Content-Type` correcto, `Cache-Control: public, max-age=31536000` o el valor configurado en `RDA_S3_CACHE_CONTROL`, y un `Content-Length` acorde al peso esperado. No configures `immutable` mientras se reutilicen URLs como `cover.png`; usalo solo si cada cambio genera una ruta unica/versionada.

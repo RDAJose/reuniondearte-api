@@ -63,6 +63,7 @@ RDA_S3_BUCKET=reuniondearte-media
 RDA_S3_ACCESS_KEY=<access-key>
 RDA_S3_SECRET_KEY=<secret-key>
 RDA_S3_PUBLIC_BASE_URL=https://media.reuniondearte.com
+RDA_S3_CACHE_CONTROL=public, max-age=31536000
 ```
 
 Para Cloudflare R2:
@@ -85,6 +86,25 @@ storage_provider=s3
 storage_path=articles/slug-del-articulo/cover.png
 public_url=https://media.reuniondearte.com/articles/slug-del-articulo/cover.png
 ```
+
+Los objetos nuevos subidos a S3/R2 se guardan con:
+
+- `Content-Type` derivado de la extension validada o del `Content-Type` remoto importado.
+- `Cache-Control` tomado de `RDA_S3_CACHE_CONTROL`, por defecto `public, max-age=31536000`.
+
+No se usa `immutable` por defecto porque algunas URLs actuales son estables pero no versionadas por hash, por ejemplo `articles/slug-del-articulo/cover.png`. Si en el futuro las rutas pasan a ser unicas/versionadas para cada cambio, se puede subir el valor a:
+
+```text
+RDA_S3_CACHE_CONTROL=public, max-age=31536000, immutable
+```
+
+Para comprobar las cabeceras de una imagen publica:
+
+```bash
+curl -I https://media.reuniondearte.com/articles/slug-del-articulo/cover.png
+```
+
+Revisa que la respuesta incluya `Content-Type`, `Cache-Control` y un `Content-Length` razonable para el uso editorial de la imagen.
 
 ## Metadatos
 
@@ -115,4 +135,5 @@ RDA_S3_BUCKET=
 RDA_S3_ACCESS_KEY=
 RDA_S3_SECRET_KEY=
 RDA_S3_PUBLIC_BASE_URL=
+RDA_S3_CACHE_CONTROL=public, max-age=31536000
 ```
