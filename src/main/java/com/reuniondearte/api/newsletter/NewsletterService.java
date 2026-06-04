@@ -70,6 +70,8 @@ public class NewsletterService {
         NewsletterSubscriber saved = subscribers.save(subscriber);
         try {
             mail.sendConfirmation(saved, confirmationToken, unsubscribeToken);
+        } catch (EmailServiceUnavailableException ex) {
+            throw ex;
         } catch (RuntimeException ex) {
             throw new EmailServiceUnavailableException();
         }

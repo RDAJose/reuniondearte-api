@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/newsletter")
 public class AdminNewsletterController {
     private final NewsletterService newsletter;
+    private final NewsletterMailService mail;
 
-    public AdminNewsletterController(NewsletterService newsletter) {
+    public AdminNewsletterController(NewsletterService newsletter, NewsletterMailService mail) {
         this.newsletter = newsletter;
+        this.mail = mail;
     }
 
     @GetMapping("/subscribers")
@@ -57,6 +59,12 @@ public class AdminNewsletterController {
             @Valid @RequestBody AdminNewsletterSendRequest request
     ) {
         return newsletter.sendArticleNotice(articleId, request);
+    }
+
+    @PostMapping(value = "/test-mail", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public AdminNewsletterTestMailResponse testMail(@Valid @RequestBody AdminNewsletterTestMailRequest request) {
+        mail.sendTestMail(request.email());
+        return new AdminNewsletterTestMailResponse(true);
     }
 
     private String csv(Object value) {
