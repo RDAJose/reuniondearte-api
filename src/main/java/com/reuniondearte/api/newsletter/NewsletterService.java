@@ -48,7 +48,7 @@ public class NewsletterService {
             return neutralResponse();
         }
         if (!request.consentAccepted()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Consent is required");
+            throw new ConsentRequiredException();
         }
         String email = request.email().trim();
         String normalized = normalizeEmail(email);
@@ -71,7 +71,7 @@ public class NewsletterService {
         try {
             mail.sendConfirmation(saved, confirmationToken, unsubscribeToken);
         } catch (RuntimeException ex) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Email service is not configured or could not send confirmation");
+            throw new EmailServiceUnavailableException();
         }
         return neutralResponse();
     }

@@ -1,6 +1,8 @@
 package com.reuniondearte.api.newsletter;
 
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/newsletter")
 public class NewsletterPublicController {
+    private static final Logger log = LoggerFactory.getLogger(NewsletterPublicController.class);
+
     private final NewsletterService newsletter;
 
     public NewsletterPublicController(NewsletterService newsletter) {
@@ -20,6 +24,13 @@ public class NewsletterPublicController {
 
     @PostMapping("/subscribe")
     public NewsletterSubscribeResponse subscribe(@Valid @RequestBody NewsletterSubscribeRequest request) {
+        log.info("newsletter subscribe endpoint reached");
+        log.info(
+                "newsletter subscribe payload email={} consentAccepted={} websiteBlank={}",
+                maskEmail(request.email()),
+                request.consentAccepted(),
+                request.website() == null || request.website().isBlank()
+        );
         return newsletter.subscribe(request);
     }
 
@@ -63,5 +74,20 @@ public class NewsletterPublicController {
 
     private String escape(String value) {
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "(blank)";
+        }
+        String trimmed = email.trim();
+        int at = trimmed.indexOf('@');
+        if (at <= 0) {
+            return "***";
+        }
+        String local = trimmed.substring(0, at);
+        String domain = trimmed.substring(at);
+        String visible = local.length() <= 2 ? local.substring(0, 1) : local.substring(0, 2);
+        return visible + "***" + domain;
     }
 }
