@@ -21,7 +21,7 @@ import org.springframework.util.StringUtils;
 public class NewsletterMailService {
     private static final Logger log = LoggerFactory.getLogger(NewsletterMailService.class);
 
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient;
     private final String provider;
     private final String brevoApiKey;
@@ -33,7 +33,6 @@ public class NewsletterMailService {
     private final Duration timeout;
 
     public NewsletterMailService(
-            ObjectMapper objectMapper,
             @Value("${rda.mail-provider:disabled}") String provider,
             @Value("${rda.brevo-api-key:}") String brevoApiKey,
             @Value("${rda.brevo-api-url:https://api.brevo.com/v3/smtp/email}") String brevoApiUrl,
@@ -43,7 +42,6 @@ public class NewsletterMailService {
             @Value("${rda.public-site-url:https://reuniondearte.com}") String publicSiteUrl,
             @Value("${rda.mail-timeout-ms:10000}") long timeoutMs
     ) {
-        this.objectMapper = objectMapper;
         this.provider = provider == null ? "disabled" : provider.trim().toLowerCase();
         this.brevoApiKey = brevoApiKey;
         this.brevoApiUrl = brevoApiUrl;
