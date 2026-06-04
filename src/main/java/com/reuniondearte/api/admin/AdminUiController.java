@@ -70,6 +70,13 @@ public class AdminUiController {
                     .comment-card strong { display: block; font-size: 14px; }
                     .comment-card small { display: block; margin-top: 3px; color: var(--muted); }
                     .comment-card p { white-space: pre-wrap; line-height: 1.45; margin: 10px 0; }
+                    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 12px; }
+                    .stat { border: 1px solid var(--line); background: var(--soft); padding: 10px; }
+                    .stat strong { display: block; font-size: 20px; }
+                    .stat span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; font-weight: 700; }
+                    .subscriber-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+                    .subscriber-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; border: 1px solid var(--line); background: #fff; padding: 8px; font-size: 13px; }
+                    .subscriber-row span { color: var(--muted); font-size: 12px; }
                     .empty { color: var(--muted); padding: 20px 0; }
                     @media (max-width: 880px) {
                       main { grid-template-columns: 1fr; }
@@ -94,6 +101,20 @@ public class AdminUiController {
                     </aside>
                     <section>
                       <p id="message" class="message">Selecciona un articulo.</p>
+                      <div class="panel comment-panel">
+                        <div class="toolbar">
+                          <h2 style="margin:0; font-size:16px; flex:1;">Newsletter / Suscriptores</h2>
+                          <select id="newsletterStatus" style="width:auto; margin:0;">
+                            <option value="ACTIVE">Activos</option>
+                            <option value="PENDING_CONFIRMATION">Pendientes</option>
+                            <option value="UNSUBSCRIBED">Bajas</option>
+                          </select>
+                          <button type="button" id="refreshNewsletterButton" class="secondary">Recargar</button>
+                          <a href="/api/admin/newsletter/export.csv" class="public-link" style="font-weight:700;">Exportar CSV</a>
+                        </div>
+                        <div id="newsletterStats" class="stats"></div>
+                        <div id="newsletterSubscribers" class="subscriber-list"></div>
+                      </div>
                       <div class="panel comment-panel">
                         <div class="toolbar">
                           <h2 style="margin:0; font-size:16px; flex:1;">Comentarios pendientes</h2>
@@ -149,6 +170,17 @@ public class AdminUiController {
                           </div>
                         </form>
                         <div class="panel">
+                          <h3>Newsletter</h3>
+                          <dl class="data-list">
+                            <div><dt>Asunto</dt><dd id="newsletterSubject">-</dd></div>
+                            <div><dt>Titulo</dt><dd id="newsletterArticleTitle">-</dd></div>
+                            <div><dt>Excerpt</dt><dd id="newsletterArticleExcerpt">-</dd></div>
+                            <div><dt>URL</dt><dd id="newsletterArticleUrl">-</dd></div>
+                          </dl>
+                          <div class="toolbar">
+                            <button type="button" id="sendNewsletterButton">Enviar aviso a suscriptores</button>
+                          </div>
+                          <p id="newsletterSendResult" class="hint"></p>
                           <h3>Imagen principal</h3>
                           <div id="coverStatus" class="image-status">Sin imagen principal</div>
                           <div id="coverWarnings"></div>
@@ -256,7 +288,7 @@ public class AdminUiController {
                     </section>
                   </main>
                   <script>
-                    const state = { status: "draft", articles: [], current: null, categories: [], comments: [] };
+                    const state = { status: "draft", articles: [], current: null, categories: [], comments: [], newsletterStatus: "ACTIVE" };
                     const list = document.getElementById("articleList");
                     const message = document.getElementById("message");
                     const pendingComments = document.getElementById("pendingComments");
@@ -270,6 +302,9 @@ public class AdminUiController {
                     const mediaAudioForm = document.getElementById("mediaAudioForm");
                     const mediaVideoForm = document.getElementById("mediaVideoForm");
                     const categorySelect = document.getElementById("category");
+                    const newsletterStatus = document.getElementById("newsletterStatus");
+                    const newsletterStats = document.getElementById("newsletterStats");
+                    const newsletterSubscribers = document.getElementById("newsletterSubscribers");
 
                     document.querySelectorAll("[data-status]").forEach((button) => {
                       button.addEventListener("click", () => {
@@ -281,9 +316,15 @@ public class AdminUiController {
 
                     document.getElementById("refreshButton").addEventListener("click", loadArticles);
                     document.getElementById("refreshCommentsButton").addEventListener("click", loadPendingComments);
+                    document.getElementById("refreshNewsletterButton").addEventListener("click", loadNewsletter);
+                    newsletterStatus.addEventListener("change", () => {
+                      state.newsletterStatus = newsletterStatus.value;
+                      loadNewsletter();
+                    });
                     document.getElementById("publishButton").addEventListener("click", () => changeStatus("publish"));
                     document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
                     document.getElementById("deleteArticleButton").addEventListener("click", deleteArticle);
+                    document.getElementById("sendNewsletterButton").addEventListener("click", sendNewsletterNotice);
                     document.getElementById("removeCoverButton").addEventListener("click", removeCover);
                     articleForm.addEventListener("submit", saveArticle);
                     coverForm.addEventListener("submit", uploadCover);
@@ -341,6 +382,37 @@ public class AdminUiController {
                       } catch (error) {
                         pendingComments.innerHTML = `<p class="empty">Error cargando comentarios: ${escapeHtml(error.message)}</p>`;
                       }
+                    }
+
+                    async function loadNewsletter() {
+                      newsletterSubscribers.innerHTML = `<p class="empty">Cargando suscriptores...</p>`;
+                      try {
+                        const data = await api(`/api/admin/newsletter/subscribers?status=${encodeURIComponent(state.newsletterStatus)}&limit=200`);
+                        renderNewsletter(data);
+                      } catch (error) {
+                        newsletterSubscribers.innerHTML = `<p class="empty">Error cargando newsletter: ${escapeHtml(error.message)}</p>`;
+                      }
+                    }
+
+                    function renderNewsletter(data) {
+                      const totals = data.totals || {};
+                      newsletterStats.innerHTML = `
+                        <div class="stat"><strong>${Number(totals.ACTIVE || 0)}</strong><span>Activos</span></div>
+                        <div class="stat"><strong>${Number(totals.PENDING_CONFIRMATION || 0)}</strong><span>Pendientes</span></div>
+                        <div class="stat"><strong>${Number(totals.UNSUBSCRIBED || 0)}</strong><span>Bajas</span></div>
+                      `;
+                      const rows = data.subscribers || [];
+                      newsletterSubscribers.innerHTML = rows.length
+                        ? rows.map((subscriber) => `
+                            <div class="subscriber-row">
+                              <div>
+                                <strong>${escapeHtml(subscriber.email || "")}</strong>
+                                <span>${escapeHtml(subscriber.status || "")} - alta ${formatDate(subscriber.createdAt)}</span>
+                              </div>
+                              <span>${escapeHtml(subscriber.source || "")}</span>
+                            </div>
+                          `).join("")
+                        : `<p class="empty">No hay suscriptores en este estado.</p>`;
                     }
 
                     function renderPendingComments() {
@@ -428,6 +500,7 @@ public class AdminUiController {
                       const publicLink = document.getElementById("publicApiLink");
                       publicLink.href = publicPath;
                       publicLink.textContent = `${window.location.origin}${publicPath}`;
+                      fillNewsletterPreview(article);
                       fillImageMetadata(article.cover);
                       renderCoverWarnings(article.cover);
                       renderCurrentCover(article.cover);
@@ -435,6 +508,16 @@ public class AdminUiController {
                       renderMediaFiles(article.mediaFiles || []);
                       document.getElementById("removeCoverButton").disabled = !article.cover;
                       document.getElementById("deleteArticleButton").disabled = article.status === "published";
+                      document.getElementById("sendNewsletterButton").disabled = article.status !== "published";
+                    }
+
+                    function fillNewsletterPreview(article) {
+                      const publicArticleUrl = `https://reuniondearte.com/articulos/${article.slug || ""}`;
+                      document.getElementById("newsletterSubject").textContent = `Nuevo articulo en Reunion de Arte: ${article.title || ""}`;
+                      document.getElementById("newsletterArticleTitle").textContent = article.title || "-";
+                      document.getElementById("newsletterArticleExcerpt").textContent = article.excerpt || "-";
+                      document.getElementById("newsletterArticleUrl").innerHTML = `<a class="public-link" href="${escapeAttribute(publicArticleUrl)}" target="_blank" rel="noreferrer">${escapeHtml(publicArticleUrl)}</a>`;
+                      document.getElementById("newsletterSendResult").textContent = article.status === "published" ? "" : "Solo se puede enviar desde articulos publicados.";
                     }
 
                     function fillImageMetadata(cover) {
@@ -669,6 +752,34 @@ public class AdminUiController {
                         setMessage("Articulo eliminado. Los ficheros de media no se han borrado fisicamente.");
                       } catch (error) {
                         setMessage(`Error eliminando articulo: ${error.message}`);
+                      }
+                    }
+
+                    async function sendNewsletterNotice() {
+                      if (!state.current) return;
+                      if (state.current.status !== "published") {
+                        setMessage("Solo se puede enviar newsletter de articulos publicados.");
+                        return;
+                      }
+                      const typed = prompt('Confirmacion fuerte: escribe exactamente "ENVIAR NEWSLETTER" para enviar el aviso a suscriptores activos.');
+                      if (typed !== "ENVIAR NEWSLETTER") {
+                        setMessage("Envio de newsletter cancelado.");
+                        return;
+                      }
+                      setMessage("Enviando newsletter...");
+                      document.getElementById("newsletterSendResult").textContent = "Enviando...";
+                      try {
+                        const result = await api(`/api/admin/newsletter/articles/${state.current.id}/send`, {
+                          method: "POST",
+                          body: JSON.stringify({ confirm: "ENVIAR NEWSLETTER" }),
+                        });
+                        const summary = `Enviados: ${result.sent || 0}. Fallidos: ${result.failed || 0}. Omitidos: ${result.skipped || 0}.`;
+                        document.getElementById("newsletterSendResult").textContent = summary;
+                        await loadNewsletter();
+                        setMessage(summary);
+                      } catch (error) {
+                        document.getElementById("newsletterSendResult").textContent = `Error: ${error.message}`;
+                        setMessage(`Error enviando newsletter: ${error.message}`);
                       }
                     }
 
@@ -970,6 +1081,7 @@ public class AdminUiController {
 
                     loadCategories()
                       .then(loadArticles)
+                      .then(loadNewsletter)
                       .then(loadPendingComments)
                       .catch((error) => setMessage(`Error inicializando admin: ${error.message}`));
                   </script>

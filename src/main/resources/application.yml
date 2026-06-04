@@ -7,6 +7,17 @@ spring:
     multipart:
       max-file-size: ${RDA_MULTIPART_MAX_FILE_SIZE:250MB}
       max-request-size: ${RDA_MULTIPART_MAX_REQUEST_SIZE:260MB}
+  mail:
+    host: ${RDA_MAIL_HOST:}
+    port: ${RDA_MAIL_PORT:587}
+    username: ${RDA_MAIL_USERNAME:}
+    password: ${RDA_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: ${PORT:${SERVER_PORT:8080}}
@@ -25,3 +36,7 @@ rda:
   s3-secret-key: ${RDA_S3_SECRET_KEY:}
   s3-public-base-url: ${RDA_S3_PUBLIC_BASE_URL:}
   s3-cache-control: ${RDA_S3_CACHE_CONTROL:public, max-age=31536000}
+  public-site-url: ${RDA_PUBLIC_SITE_URL:https://reuniondearte.com}
+  api-public-url: ${RDA_API_PUBLIC_URL:http://localhost:8080}
+  mail-from: ${RDA_MAIL_FROM:}
+  mail-from-name: ${RDA_MAIL_FROM_NAME:Reunion de Arte}

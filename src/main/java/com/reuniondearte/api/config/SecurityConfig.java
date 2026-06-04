@@ -34,6 +34,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/featured").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/newsletter/subscribe").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/confirm").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/unsubscribe").permitAll()
                         .requestMatchers(HttpMethod.GET, "/media/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/admin", "/admin/**").authenticated()
@@ -80,6 +83,7 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/api/categories/**", configuration);
         source.registerCorsConfiguration("/api/featured", configuration);
         source.registerCorsConfiguration("/api/health", configuration);
+        source.registerCorsConfiguration("/api/newsletter/**", configuration);
         return source;
     }
 
