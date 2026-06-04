@@ -42,5 +42,9 @@ rda:
   s3-cache-control: ${RDA_S3_CACHE_CONTROL:public, max-age=31536000}
   public-site-url: ${RDA_PUBLIC_SITE_URL:https://reuniondearte.com}
   api-public-url: ${RDA_API_PUBLIC_URL:http://localhost:8080}
+  mail-provider: ${RDA_MAIL_PROVIDER:disabled}
   mail-from: ${RDA_MAIL_FROM:}
   mail-from-name: ${RDA_MAIL_FROM_NAME:Reunion de Arte}
+  mail-timeout-ms: ${RDA_MAIL_TIMEOUT_MS:10000}
+  brevo-api-key: ${RDA_BREVO_API_KEY:}
+  brevo-api-url: ${RDA_BREVO_API_URL:https://api.brevo.com/v3/smtp/email}

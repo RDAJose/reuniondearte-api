@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class NewsletterStartupLogger implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(NewsletterStartupLogger.class);
-    public static final String VERSION = "newsletter-v2-error-json-2026-06-04";
+    public static final String VERSION = "newsletter-v3-brevo-http-2026-06-04";
 
     @Override
     public void run(ApplicationArguments args) {

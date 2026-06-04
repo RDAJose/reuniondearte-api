@@ -84,6 +84,22 @@ RDA_S3_PUBLIC_BASE_URL=https://<dominio-publico-media>
 RDA_S3_CACHE_CONTROL=public, max-age=31536000
 ```
 
+Variables newsletter con Brevo Transactional Email API:
+
+```text
+RDA_MAIL_PROVIDER=brevo
+RDA_BREVO_API_KEY=<brevo-api-key>
+RDA_MAIL_FROM=josele.olmedobarrionuevo@gmail.com
+RDA_MAIL_FROM_NAME=Reunion de Arte
+RDA_MAIL_TIMEOUT_MS=10000
+RDA_PUBLIC_SITE_URL=https://reuniondearte.com
+RDA_API_PUBLIC_URL=https://reuniondearte-api.onrender.com
+```
+
+Render puede bloquear o hacer inviable la salida SMTP a `smtp.gmail.com:587`; por eso la newsletter usa HTTPS contra Brevo (`https://api.brevo.com/v3/smtp/email`) y no Gmail SMTP en produccion. Brevo solo se usa como proveedor de envio transaccional: los suscriptores, estados, tokens hasheados, bajas, logs y export CSV siguen guardandose en PostgreSQL propio.
+
+Las variables SMTP antiguas (`RDA_MAIL_HOST`, `RDA_MAIL_PORT`, `RDA_MAIL_USERNAME`, `RDA_MAIL_PASSWORD`) pueden quedar sin configurar si `RDA_MAIL_PROVIDER=brevo`.
+
 No uses en produccion:
 
 ```text
