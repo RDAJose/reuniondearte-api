@@ -96,6 +96,7 @@ public class AdminUiController {
                       </div>
                       <div class="toolbar">
                         <button type="button" id="refreshButton" class="secondary">Recargar</button>
+                        <a href="/admin/tools/editor-bloques" target="_blank" rel="noreferrer" class="public-link" style="font-weight:700;">Editor visual de bloques</a>
                       </div>
                       <div id="articleList" class="article-list"></div>
                     </aside>
@@ -1084,6 +1085,154 @@ public class AdminUiController {
                       .then(loadNewsletter)
                       .then(loadPendingComments)
                       .catch((error) => setMessage(`Error inicializando admin: ${error.message}`));
+                  </script>
+                </body>
+                </html>
+                """;
+    }
+
+    @GetMapping(value = "/admin/tools/editor-bloques", produces = MediaType.TEXT_HTML_VALUE)
+    public String visualBlockEditor() {
+        return """
+                <!doctype html>
+                <html lang="es">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <title>Editor visual de bloques - Reunion de Arte</title>
+                  <style>
+                    :root { color-scheme: light; --ink:#1c1917; --muted:#78716c; --line:#d6d3d1; --paper:#fffdf8; --soft:#f5f2ea; --accent:#334155; }
+                    * { box-sizing: border-box; }
+                    body { margin: 0; background: var(--paper); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+                    header { border-bottom: 1px solid var(--line); background: #fff; padding: 14px 18px; }
+                    header h1 { margin: 0; font-size: 20px; }
+                    main { max-width: 980px; margin: 0 auto; padding: 18px; }
+                    button, textarea { font: inherit; }
+                    button { border: 1px solid var(--ink); background: var(--ink); color: #fff; padding: 9px 12px; cursor: pointer; }
+                    button.secondary { background: #fff; color: var(--ink); border-color: var(--line); }
+                    textarea { width: 100%; min-height: 420px; margin-top: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 12px; resize: vertical; line-height: 1.45; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; }
+                    .panel { border: 1px solid var(--line); background: #fff; padding: 14px; margin-top: 14px; }
+                    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; }
+                    .notice { border-left: 3px solid #92400e; background: #fffbeb; color: #713f12; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+                    .hint { color: var(--muted); font-size: 13px; line-height: 1.45; }
+                    .steps { margin: 8px 0 0 20px; padding: 0; line-height: 1.5; }
+                    .copy-status { min-height: 20px; color: #166534; font-size: 13px; }
+                    .public-link { color: #1d4ed8; font-size: 14px; }
+                  </style>
+                </head>
+                <body>
+                  <header><h1>Editor visual de bloques</h1></header>
+                  <main>
+                    <p><a href="/admin" class="public-link">Volver al admin</a></p>
+                    <p class="notice">Usa solo im&aacute;genes propias, press kit oficial, cesi&oacute;n escrita o licencias compatibles. No uses Google, Letterboxd, Instagram, prensa, blogs o redes sin permiso claro.</p>
+                    <section class="panel">
+                      <h2 style="margin:0; font-size:16px;">Plantillas</h2>
+                      <p class="hint">Elige una plantilla, cambia los textos y sustituye cada <strong>image:</strong> por la URL p&uacute;blica legal de R2.</p>
+                      <div class="toolbar">
+                        <button type="button" class="secondary" data-template="posterGrid">Grid p&oacute;ster</button>
+                        <button type="button" class="secondary" data-template="landscapeGrid">Grid panor&aacute;mico</button>
+                        <button type="button" class="secondary" data-template="ranking">Ranking</button>
+                        <button type="button" class="secondary" data-template="gallery">Galer&iacute;a</button>
+                      </div>
+                    </section>
+                    <section class="panel">
+                      <h2 style="margin:0; font-size:16px;">Markdown</h2>
+                      <textarea id="markdownOutput" spellcheck="false"></textarea>
+                      <div class="toolbar">
+                        <button type="button" id="copyMarkdownButton">Copiar Markdown</button>
+                      </div>
+                      <p id="copyStatus" class="copy-status"></p>
+                    </section>
+                    <section class="panel">
+                      <h2 style="margin:0; font-size:16px;">Uso</h2>
+                      <ol class="steps">
+                        <li>Sube/importa im&aacute;genes legales desde el admin.</li>
+                        <li>Copia la URL p&uacute;blica de R2.</li>
+                        <li>P&eacute;gala en image: dentro del bloque.</li>
+                        <li>Copia el Markdown final.</li>
+                        <li>Vuelve al art&iacute;culo y p&eacute;galo en contentMarkdown.</li>
+                      </ol>
+                    </section>
+                  </main>
+                  <script>
+                    const markdownOutput = document.getElementById("markdownOutput");
+                    const copyStatus = document.getElementById("copyStatus");
+                    const templates = {
+                      posterGrid: [
+                        `:::rda-grid variant="poster" columns="5"`,
+                        `- title: "Titulo de ejemplo 1"`,
+                        `  image: "https://placehold.co/400x600"`,
+                        `  alt: "Poster de ejemplo 1"`,
+                        `- title: "Titulo de ejemplo 2"`,
+                        `  image: "https://placehold.co/400x600"`,
+                        `  alt: "Poster de ejemplo 2"`,
+                        `- title: "Titulo de ejemplo 3"`,
+                        `  image: "https://placehold.co/400x600"`,
+                        `  alt: "Poster de ejemplo 3"`,
+                        `:::`
+                      ].join("\\n"),
+                      landscapeGrid: [
+                        `:::rda-grid variant="landscape" columns="3"`,
+                        `- title: "Titulo de ejemplo 1"`,
+                        `  image: "https://placehold.co/1200x675"`,
+                        `  alt: "Imagen panoramica de ejemplo 1"`,
+                        `- title: "Titulo de ejemplo 2"`,
+                        `  image: "https://placehold.co/1200x675"`,
+                        `  alt: "Imagen panoramica de ejemplo 2"`,
+                        `- title: "Titulo de ejemplo 3"`,
+                        `  image: "https://placehold.co/1200x675"`,
+                        `  alt: "Imagen panoramica de ejemplo 3"`,
+                        `:::`
+                      ].join("\\n"),
+                      ranking: [
+                        `:::rda-ranking`,
+                        `1. title: "Posicion de ejemplo 1"`,
+                        `   image: "https://placehold.co/400x600"`,
+                        `   text: "Texto breve de ejemplo."`,
+                        `2. title: "Posicion de ejemplo 2"`,
+                        `   image: "https://placehold.co/400x600"`,
+                        `   text: "Texto breve de ejemplo."`,
+                        `3. title: "Posicion de ejemplo 3"`,
+                        `   image: "https://placehold.co/400x600"`,
+                        `   text: "Texto breve de ejemplo."`,
+                        `:::`
+                      ].join("\\n"),
+                      gallery: [
+                        `:::rda-gallery`,
+                        `- image: "https://placehold.co/1200x675"`,
+                        `  alt: "Imagen de galeria 1"`,
+                        `  caption: "Caption de ejemplo 1"`,
+                        `- image: "https://placehold.co/1200x675"`,
+                        `  alt: "Imagen de galeria 2"`,
+                        `  caption: "Caption de ejemplo 2"`,
+                        `- image: "https://placehold.co/1200x675"`,
+                        `  alt: "Imagen de galeria 3"`,
+                        `  caption: "Caption de ejemplo 3"`,
+                        `:::`
+                      ].join("\\n")
+                    };
+
+                    document.querySelectorAll("[data-template]").forEach((button) => {
+                      button.addEventListener("click", () => {
+                        markdownOutput.value = templates[button.dataset.template] || "";
+                        markdownOutput.focus();
+                        copyStatus.textContent = "";
+                      });
+                    });
+
+                    document.getElementById("copyMarkdownButton").addEventListener("click", async () => {
+                      markdownOutput.focus();
+                      markdownOutput.select();
+                      try {
+                        await navigator.clipboard.writeText(markdownOutput.value);
+                        copyStatus.textContent = "Markdown copiado.";
+                      } catch (error) {
+                        document.execCommand("copy");
+                        copyStatus.textContent = "Markdown seleccionado y copiado.";
+                      }
+                    });
+
+                    markdownOutput.value = templates.posterGrid;
                   </script>
                 </body>
                 </html>
