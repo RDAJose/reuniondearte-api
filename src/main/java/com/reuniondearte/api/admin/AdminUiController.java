@@ -58,6 +58,11 @@ public class AdminUiController {
                     .notice { border-left: 3px solid #92400e; background: #fffbeb; color: #713f12; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
                     .warning-list { display: grid; gap: 6px; margin: 10px 0 12px; padding: 10px 12px; border: 1px solid #f59e0b; background: #fffbeb; color: #713f12; font-size: 13px; line-height: 1.4; }
                     .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+                    .visual-blocks { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
+                    .visual-blocks h3 { margin: 0 0 6px; font-size: 14px; }
+                    .visual-blocks .toolbar { margin: 8px 0 0; }
+                    .visual-blocks button { padding: 7px 9px; font-size: 13px; }
+                    .visual-blocks .hint { margin: 0; }
                     .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
                     .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
                     .body-metadata { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
@@ -139,6 +144,17 @@ public class AdminUiController {
                           <textarea id="excerpt" name="excerpt"></textarea>
                           <label for="contentMarkdown">Content markdown</label>
                           <textarea id="contentMarkdown" name="contentMarkdown" style="min-height: 360px;"></textarea>
+                          <div class="visual-blocks" aria-labelledby="visualBlocksTitle">
+                            <h3 id="visualBlocksTitle">Bloques visuales</h3>
+                            <p class="hint">Estos bloques se veran en la web publica como cuadriculas, rankings o galerias. Usa solo imagenes legales: propias, press kit oficial, cesion escrita o licencia compatible.</p>
+                            <div class="toolbar">
+                              <button type="button" class="secondary" data-insert-visual-block="posterGrid">Insertar cuadricula de posters</button>
+                              <button type="button" class="secondary" data-insert-visual-block="landscapeGrid">Insertar cuadricula panoramica</button>
+                              <button type="button" class="secondary" data-insert-visual-block="ranking">Insertar ranking</button>
+                              <button type="button" class="secondary" data-insert-visual-block="gallery">Insertar galeria</button>
+                              <button type="button" class="secondary" data-insert-visual-block="rightsNotice">Insertar aviso legal de imagen</button>
+                            </div>
+                          </div>
                           <div class="meta-grid">
                             <div>
                               <label for="category">Category</label>
@@ -305,6 +321,48 @@ public class AdminUiController {
                     const newsletterStatus = document.getElementById("newsletterStatus");
                     const newsletterStats = document.getElementById("newsletterStats");
                     const newsletterSubscribers = document.getElementById("newsletterSubscribers");
+                    const contentMarkdown = document.getElementById("contentMarkdown");
+                    let contentMarkdownRange = null;
+                    const visualBlockTemplates = {
+                      posterGrid: [
+                        `:::rda-grid variant="poster" columns="5"`,
+                        `- ![Poster de ejemplo 1](https://placehold.co/400x600)`,
+                        `  Titulo de ejemplo 1`,
+                        `- ![Poster de ejemplo 2](https://placehold.co/400x600)`,
+                        `  Titulo de ejemplo 2`,
+                        `- ![Poster de ejemplo 3](https://placehold.co/400x600)`,
+                        `  Titulo de ejemplo 3`,
+                        `:::`
+                      ].join("\\n"),
+                      landscapeGrid: [
+                        `:::rda-grid variant="landscape" columns="3"`,
+                        `- ![Imagen panoramica de ejemplo 1](https://placehold.co/1200x675)`,
+                        `  Titulo de ejemplo 1`,
+                        `- ![Imagen panoramica de ejemplo 2](https://placehold.co/1200x675)`,
+                        `  Titulo de ejemplo 2`,
+                        `- ![Imagen panoramica de ejemplo 3](https://placehold.co/1200x675)`,
+                        `  Titulo de ejemplo 3`,
+                        `:::`
+                      ].join("\\n"),
+                      ranking: [
+                        `:::rda-ranking`,
+                        `1. **Posicion de ejemplo 1**`,
+                        `   Texto breve de ejemplo.`,
+                        `2. **Posicion de ejemplo 2**`,
+                        `   Texto breve de ejemplo.`,
+                        `3. **Posicion de ejemplo 3**`,
+                        `   Texto breve de ejemplo.`,
+                        `:::`
+                      ].join("\\n"),
+                      gallery: [
+                        `:::rda-gallery`,
+                        `![Imagen de galeria 1](https://placehold.co/1200x675)`,
+                        `![Imagen de galeria 2](https://placehold.co/1200x675)`,
+                        `![Imagen de galeria 3](https://placehold.co/1200x675)`,
+                        `:::`
+                      ].join("\\n"),
+                      rightsNotice: `REVISAR DERECHOS: usar solo imagen propia, press kit oficial, cesion escrita o licencia compatible. No usar Google, Instagram, Letterboxd, prensa ni redes sin permiso.`
+                    };
 
                     document.querySelectorAll("[data-status]").forEach((button) => {
                       button.addEventListener("click", () => {
@@ -338,6 +396,45 @@ public class AdminUiController {
                     document.getElementById("bodyImageFile").addEventListener("change", (event) => showFileHint(event, "bodyFileHint"));
                     document.getElementById("mediaAudioFile").addEventListener("change", (event) => showMediaFileHint(event, "mediaAudioFileHint", 100));
                     document.getElementById("mediaVideoFile").addEventListener("change", (event) => showMediaFileHint(event, "mediaVideoFileHint", 250));
+                    ["focus", "click", "keyup", "select", "input"].forEach((eventName) => {
+                      contentMarkdown.addEventListener(eventName, rememberContentMarkdownRange);
+                    });
+                    document.querySelectorAll("[data-insert-visual-block]").forEach((button) => {
+                      button.addEventListener("click", () => insertVisualBlock(button.dataset.insertVisualBlock));
+                    });
+
+                    function rememberContentMarkdownRange() {
+                      if (typeof contentMarkdown.selectionStart !== "number" || typeof contentMarkdown.selectionEnd !== "number") {
+                        contentMarkdownRange = null;
+                        return;
+                      }
+                      contentMarkdownRange = {
+                        start: contentMarkdown.selectionStart,
+                        end: contentMarkdown.selectionEnd
+                      };
+                    }
+
+                    function insertVisualBlock(templateKey) {
+                      const template = visualBlockTemplates[templateKey];
+                      if (!template) return;
+                      const currentValue = contentMarkdown.value || "";
+                      const hasKnownRange = contentMarkdownRange
+                        && contentMarkdownRange.start <= currentValue.length
+                        && contentMarkdownRange.end <= currentValue.length;
+                      const start = hasKnownRange ? contentMarkdownRange.start : currentValue.length;
+                      const end = hasKnownRange ? contentMarkdownRange.end : currentValue.length;
+                      const before = currentValue.slice(0, start);
+                      const after = currentValue.slice(end);
+                      const prefix = before.length === 0 || before.endsWith("\\n\\n") ? "" : before.endsWith("\\n") ? "\\n" : "\\n\\n";
+                      const suffix = after.length === 0 || after.startsWith("\\n\\n") ? "" : after.startsWith("\\n") ? "\\n" : "\\n\\n";
+                      const insertion = `${prefix}${template}${suffix}`;
+                      const nextCursorPosition = before.length + insertion.length;
+                      contentMarkdown.value = `${before}${insertion}${after}`;
+                      contentMarkdown.focus();
+                      contentMarkdown.setSelectionRange(nextCursorPosition, nextCursorPosition);
+                      rememberContentMarkdownRange();
+                      contentMarkdown.dispatchEvent(new Event("input", { bubbles: true }));
+                    }
 
                     async function api(path, options = {}) {
                       const response = await fetch(path, {
@@ -489,7 +586,8 @@ public class AdminUiController {
                       document.getElementById("title").value = article.title || "";
                       document.getElementById("slug").value = article.slug || "";
                       document.getElementById("excerpt").value = article.excerpt || "";
-                      document.getElementById("contentMarkdown").value = article.content_markdown || "";
+                      contentMarkdown.value = article.content_markdown || "";
+                      contentMarkdownRange = null;
                       document.getElementById("category").value = article.category || "cultura";
                       document.getElementById("status").value = article.status || "draft";
                       document.getElementById("canonicalUrl").value = article.canonical_url || "";
