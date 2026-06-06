@@ -41,9 +41,14 @@ public class AdminUiController {
                     .article-row.active { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); }
                     .article-row strong { display: block; font-size: 14px; line-height: 1.25; }
                     .article-row span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-                    .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 18px; align-items: start; }
+                    .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 18px; align-items: start; }
                     .panel { border: 1px solid var(--line); background: #fff; padding: 14px; }
                     .panel h2, .panel h3 { margin: 0 0 8px; font-size: 16px; }
+                    .editor-sidebar { position: sticky; top: 70px; max-height: calc(100vh - 88px); overflow-y: auto; display: grid; gap: 10px; padding: 10px; }
+                    .side-section { border: 1px solid var(--line); background: #fff; }
+                    .side-section summary { cursor: pointer; padding: 10px 12px; background: var(--soft); font-size: 14px; font-weight: 800; }
+                    .side-section[open] summary { border-bottom: 1px solid var(--line); }
+                    .side-section-body { padding: 12px; }
                     .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
                     .message { min-height: 24px; margin: 8px 0 12px; color: var(--muted); font-size: 14px; }
                     .public-link { word-break: break-all; color: #1d4ed8; font-size: 14px; }
@@ -59,9 +64,21 @@ public class AdminUiController {
                     .warning-list { display: grid; gap: 6px; margin: 10px 0 12px; padding: 10px 12px; border: 1px solid #f59e0b; background: #fffbeb; color: #713f12; font-size: 13px; line-height: 1.4; }
                     .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
                     .snippet { width: 100%; min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
-                    .body-image { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+                    #bodyImages { display: grid; gap: 10px; max-height: min(54vh, 620px); overflow-y: auto; padding-right: 2px; }
+                    #mediaFiles { display: grid; gap: 10px; max-height: min(42vh, 460px); overflow-y: auto; padding-right: 2px; }
+                    .body-image { border: 1px solid var(--line); margin: 0; padding: 10px; background: #fff; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: start; }
+                    .body-thumbnail { width: 92px; height: 92px; max-height: none; object-fit: contain; background: #e7e5e4; }
+                    .asset-card-body { min-width: 0; }
+                    .asset-title { margin: 0 0 4px; font-size: 13px; line-height: 1.25; }
+                    .asset-summary { color: var(--muted); font-size: 12px; line-height: 1.35; margin-bottom: 6px; overflow-wrap: anywhere; }
+                    .compact-snippet { min-height: 52px; max-height: 72px; font-size: 11px; line-height: 1.35; }
+                    .compact-actions { margin: 8px 0 0; gap: 6px; }
+                    .compact-actions button { padding: 7px 8px; font-size: 12px; }
+                    .asset-legal { margin-top: 8px; font-size: 12px; }
+                    .asset-legal summary { cursor: pointer; color: var(--muted); font-weight: 800; }
+                    .asset-legal .data-list { margin-bottom: 0; font-size: 12px; }
                     .body-metadata { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
-                    .media-file { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+                    .media-file { border: 1px solid var(--line); margin: 0; padding: 10px; background: #fff; }
                     .media-metadata { border: 1px solid var(--line); background: var(--soft); padding: 10px; margin-top: 10px; }
                     .comment-panel { margin-bottom: 18px; }
                     .comment-list { display: grid; gap: 10px; }
@@ -82,6 +99,10 @@ public class AdminUiController {
                       main { grid-template-columns: 1fr; }
                       aside { border-right: 0; border-bottom: 1px solid var(--line); }
                       .grid { grid-template-columns: 1fr; }
+                      .editor-sidebar { position: static; max-height: none; overflow: visible; }
+                      #bodyImages, #mediaFiles { max-height: none; overflow: visible; }
+                      .body-image { grid-template-columns: 76px minmax(0, 1fr); }
+                      .body-thumbnail { width: 76px; height: 76px; }
                     }
                   </style>
                 </head>
@@ -170,120 +191,143 @@ public class AdminUiController {
                             <button type="button" id="deleteArticleButton" class="danger">Eliminar articulo</button>
                           </div>
                         </form>
-                        <div class="panel">
-                          <h3>Newsletter</h3>
-                          <dl class="data-list">
-                            <div><dt>Asunto</dt><dd id="newsletterSubject">-</dd></div>
-                            <div><dt>Titulo</dt><dd id="newsletterArticleTitle">-</dd></div>
-                            <div><dt>Excerpt</dt><dd id="newsletterArticleExcerpt">-</dd></div>
-                            <div><dt>URL</dt><dd id="newsletterArticleUrl">-</dd></div>
-                          </dl>
-                          <div class="toolbar">
-                            <button type="button" id="sendNewsletterButton">Enviar aviso a suscriptores</button>
-                          </div>
-                          <p id="newsletterSendResult" class="hint"></p>
-                          <h3>Imagen principal</h3>
-                          <div id="coverStatus" class="image-status">Sin imagen principal</div>
-                          <div id="coverWarnings"></div>
-                          <div id="currentCover"></div>
-                          <form id="coverMetadataForm">
-                            <label for="altText">Alt text obligatorio</label>
-                            <input id="altText" name="altText" required>
-                            <label for="caption">Caption</label>
-                            <input id="caption" name="caption">
-                            <label for="credit">Credit</label>
-                            <input id="credit" name="credit">
-                            <label for="sourceUrl">Source URL</label>
-                            <input id="sourceUrl" name="sourceUrl">
-                            <label for="rightsNotes">Rights notes</label>
-                            <textarea id="rightsNotes" name="rightsNotes"></textarea>
-                            <p class="hint">Recomendacion cover: maximo 1600px de ancho, preferente webp, intenta quedar por debajo de 400 KB cuando sea viable.</p>
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit" class="secondary">Guardar datos de imagen</button>
-                              <button type="button" id="removeCoverButton" class="danger">Quitar imagen principal</button>
+                        <div class="panel editor-sidebar">
+                          <details class="side-section" open>
+                            <summary>Newsletter</summary>
+                            <div class="side-section-body">
+                              <dl class="data-list">
+                                <div><dt>Asunto</dt><dd id="newsletterSubject">-</dd></div>
+                                <div><dt>Titulo</dt><dd id="newsletterArticleTitle">-</dd></div>
+                                <div><dt>Excerpt</dt><dd id="newsletterArticleExcerpt">-</dd></div>
+                                <div><dt>URL</dt><dd id="newsletterArticleUrl">-</dd></div>
+                              </dl>
+                              <div class="toolbar">
+                                <button type="button" id="sendNewsletterButton">Enviar aviso a suscriptores</button>
+                              </div>
+                              <p id="newsletterSendResult" class="hint"></p>
                             </div>
-                          </form>
-                          <form id="coverForm">
-                            <label for="coverFile">File</label>
-                            <input id="coverFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
-                            <p id="coverFileHint" class="hint"></p>
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Cambiar imagen principal</button>
+                          </details>
+                          <details class="side-section" open>
+                            <summary>Imagen principal</summary>
+                            <div class="side-section-body">
+                              <div id="coverStatus" class="image-status">Sin imagen principal</div>
+                              <div id="coverWarnings"></div>
+                              <div id="currentCover"></div>
+                              <form id="coverMetadataForm">
+                                <label for="altText">Alt text obligatorio</label>
+                                <input id="altText" name="altText" required>
+                                <label for="caption">Caption</label>
+                                <input id="caption" name="caption">
+                                <label for="credit">Credit</label>
+                                <input id="credit" name="credit">
+                                <label for="sourceUrl">Source URL</label>
+                                <input id="sourceUrl" name="sourceUrl">
+                                <label for="rightsNotes">Rights notes</label>
+                                <textarea id="rightsNotes" name="rightsNotes"></textarea>
+                                <p class="hint">Recomendacion cover: maximo 1600px de ancho, preferente webp, intenta quedar por debajo de 400 KB cuando sea viable.</p>
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit" class="secondary">Guardar datos de imagen</button>
+                                  <button type="button" id="removeCoverButton" class="danger">Quitar imagen principal</button>
+                                </div>
+                              </form>
+                              <form id="coverForm">
+                                <label for="coverFile">File</label>
+                                <input id="coverFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+                                <p id="coverFileHint" class="hint"></p>
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit">Cambiar imagen principal</button>
+                                </div>
+                              </form>
+                              <h3 style="margin-top: 18px;">Importar imagen desde URL</h3>
+                              <p class="notice">Importar una imagen no confirma que tengas derechos. Usa solo imagenes propias, autorizadas, de press kit permitido, dominio publico o licencia compatible.</p>
+                              <form id="coverImportForm">
+                                <label for="coverImportUrl">URL de imagen</label>
+                                <input id="coverImportUrl" name="imageUrl" type="url" placeholder="https://...">
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit">Importar cover</button>
+                                </div>
+                              </form>
                             </div>
-                          </form>
-                          <h3 style="margin-top: 18px;">Importar imagen desde URL</h3>
-                          <p class="notice">Importar una imagen no confirma que tengas derechos. Usa solo imagenes propias, autorizadas, de press kit permitido, dominio publico o licencia compatible.</p>
-                          <form id="coverImportForm">
-                            <label for="coverImportUrl">URL de imagen</label>
-                            <input id="coverImportUrl" name="imageUrl" type="url" placeholder="https://...">
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Importar cover</button>
+                          </details>
+                          <details class="side-section" open>
+                            <summary>Im&aacute;genes de cuerpo</summary>
+                            <div class="side-section-body">
+                              <p class="hint">Recomendacion cuerpo: maximo 1200px de ancho, preferente webp. Despues de subir o importar, copia el snippet Markdown y pegalo en Content markdown.</p>
+                              <div class="body-metadata">
+                                <label for="bodyAltText">Alt text obligatorio</label>
+                                <input id="bodyAltText" name="bodyAltText" required>
+                                <label for="bodyCaption">Caption</label>
+                                <input id="bodyCaption" name="bodyCaption">
+                                <label for="bodyCredit">Credit</label>
+                                <input id="bodyCredit" name="bodyCredit">
+                                <label for="bodySourceUrl">Source URL</label>
+                                <input id="bodySourceUrl" name="bodySourceUrl">
+                                <label for="bodyRightsNotes">Rights notes</label>
+                                <textarea id="bodyRightsNotes" name="bodyRightsNotes"></textarea>
+                              </div>
+                              <form id="bodyImageForm">
+                                <label for="bodyImageFile">File</label>
+                                <input id="bodyImageFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+                                <p id="bodyFileHint" class="hint"></p>
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit">Subir imagen de cuerpo</button>
+                                </div>
+                              </form>
+                              <form id="bodyImportForm">
+                                <label for="bodyImportUrl">Importar imagen de cuerpo desde URL</label>
+                                <input id="bodyImportUrl" name="imageUrl" type="url" placeholder="https://...">
+                                <p class="notice">Importa solo im&aacute;genes propias, autorizadas, de prensa permitida, dominio p&uacute;blico o licencia compatible.</p>
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit">Importar imagen de cuerpo</button>
+                                </div>
+                              </form>
+                              <div id="bodyImages"></div>
                             </div>
-                          </form>
-                          <h3 style="margin-top: 18px;">Im&aacute;genes de cuerpo</h3>
-                          <p class="hint">Recomendacion cuerpo: maximo 1200px de ancho, preferente webp. Despues de subir o importar, copia el snippet Markdown y pegalo en Content markdown.</p>
-                          <div class="body-metadata">
-                            <label for="bodyAltText">Alt text obligatorio</label>
-                            <input id="bodyAltText" name="bodyAltText" required>
-                            <label for="bodyCaption">Caption</label>
-                            <input id="bodyCaption" name="bodyCaption">
-                            <label for="bodyCredit">Credit</label>
-                            <input id="bodyCredit" name="bodyCredit">
-                            <label for="bodySourceUrl">Source URL</label>
-                            <input id="bodySourceUrl" name="bodySourceUrl">
-                            <label for="bodyRightsNotes">Rights notes</label>
-                            <textarea id="bodyRightsNotes" name="bodyRightsNotes"></textarea>
-                          </div>
-                          <form id="bodyImageForm">
-                            <label for="bodyImageFile">File</label>
-                            <input id="bodyImageFile" name="file" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
-                            <p id="bodyFileHint" class="hint"></p>
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Subir imagen de cuerpo</button>
+                          </details>
+                          <details class="side-section">
+                            <summary>Audio y v&iacute;deo</summary>
+                            <div class="side-section-body">
+                              <p class="notice">Sube solo audio o v&iacute;deo propio, autorizado, de prensa permitida, dominio p&uacute;blico o con licencia compatible. Para trailers o entrevistas externas, es preferible insertar el enlace oficial de YouTube/Vimeo en el Markdown.</p>
+                              <div class="media-metadata">
+                                <label for="mediaTitle">Title</label>
+                                <input id="mediaTitle" name="mediaTitle">
+                                <label for="mediaCaption">Caption / description</label>
+                                <input id="mediaCaption" name="mediaCaption">
+                                <label for="mediaCredit">Credit</label>
+                                <input id="mediaCredit" name="mediaCredit">
+                                <label for="mediaSourceUrl">Source URL</label>
+                                <input id="mediaSourceUrl" name="mediaSourceUrl">
+                                <label for="mediaRightsNotes">Rights notes</label>
+                                <textarea id="mediaRightsNotes" name="mediaRightsNotes"></textarea>
+                              </div>
+                              <form id="mediaAudioForm">
+                                <label for="mediaAudioFile">Archivo de audio</label>
+                                <input id="mediaAudioFile" name="file" type="file" accept=".mp3,.m4a,.wav,.ogg,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg">
+                                <p id="mediaAudioFileHint" class="hint"></p>
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit">Subir audio</button>
+                                </div>
+                              </form>
+                              <form id="mediaVideoForm">
+                                <label for="mediaVideoFile">Archivo de v&iacute;deo</label>
+                                <input id="mediaVideoFile" name="file" type="file" accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime">
+                                <p id="mediaVideoFileHint" class="hint"></p>
+                                <div class="toolbar" style="margin-top: 14px;">
+                                  <button type="submit">Subir v&iacute;deo</button>
+                                </div>
+                              </form>
+                              <div id="mediaFiles"></div>
                             </div>
-                          </form>
-                          <form id="bodyImportForm">
-                            <label for="bodyImportUrl">Importar imagen de cuerpo desde URL</label>
-                            <input id="bodyImportUrl" name="imageUrl" type="url" placeholder="https://...">
-                            <p class="notice">Importa solo im&aacute;genes propias, autorizadas, de prensa permitida, dominio p&uacute;blico o licencia compatible.</p>
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Importar imagen de cuerpo</button>
+                          </details>
+                          <details class="side-section">
+                            <summary>Herramientas editoriales</summary>
+                            <div class="side-section-body">
+                              <dl class="data-list">
+                                <div><dt>API publica</dt><dd><a id="publicApiLink" class="public-link" href="#" target="_blank" rel="noreferrer"></a></dd></div>
+                                <div><dt>Editor visual</dt><dd><a href="/admin/tools/editor-bloques" target="_blank" rel="noreferrer" class="public-link">Editor visual de bloques</a></dd></div>
+                              </dl>
                             </div>
-                          </form>
-                          <div id="bodyImages"></div>
-                          <h3 style="margin-top: 18px;">Audio y v&iacute;deo</h3>
-                          <p class="notice">Sube solo audio o v&iacute;deo propio, autorizado, de prensa permitida, dominio p&uacute;blico o con licencia compatible. Para trailers o entrevistas externas, es preferible insertar el enlace oficial de YouTube/Vimeo en el Markdown.</p>
-                          <div class="media-metadata">
-                            <label for="mediaTitle">Title</label>
-                            <input id="mediaTitle" name="mediaTitle">
-                            <label for="mediaCaption">Caption / description</label>
-                            <input id="mediaCaption" name="mediaCaption">
-                            <label for="mediaCredit">Credit</label>
-                            <input id="mediaCredit" name="mediaCredit">
-                            <label for="mediaSourceUrl">Source URL</label>
-                            <input id="mediaSourceUrl" name="mediaSourceUrl">
-                            <label for="mediaRightsNotes">Rights notes</label>
-                            <textarea id="mediaRightsNotes" name="mediaRightsNotes"></textarea>
-                          </div>
-                          <form id="mediaAudioForm">
-                            <label for="mediaAudioFile">Archivo de audio</label>
-                            <input id="mediaAudioFile" name="file" type="file" accept=".mp3,.m4a,.wav,.ogg,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg">
-                            <p id="mediaAudioFileHint" class="hint"></p>
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Subir audio</button>
-                            </div>
-                          </form>
-                          <form id="mediaVideoForm">
-                            <label for="mediaVideoFile">Archivo de v&iacute;deo</label>
-                            <input id="mediaVideoFile" name="file" type="file" accept=".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime">
-                            <p id="mediaVideoFileHint" class="hint"></p>
-                            <div class="toolbar" style="margin-top: 14px;">
-                              <button type="submit">Subir v&iacute;deo</button>
-                            </div>
-                          </form>
-                          <div id="mediaFiles"></div>
-                          <h3 style="margin-top: 18px;">API publica</h3>
-                          <a id="publicApiLink" class="public-link" href="#" target="_blank" rel="noreferrer"></a>
+                          </details>
                         </div>
                       </div>
                     </section>
@@ -606,24 +650,31 @@ public class AdminUiController {
                         const snippetId = `snippet-${image.id || image.mediaAssetId}`;
                         return `
                         <div class="body-image" data-body-image-id="${image.id || ""}">
-                          <h4 style="margin:0 0 8px;">Imagen de cuerpo ${index + 1}</h4>
-                          <img class="image-preview" src="${escapeAttribute(image.publicUrl)}" alt="${escapeAttribute(image.altText || "")}">
-                          <dl class="data-list">
-                            <div><dt>URL publica</dt><dd><a class="public-link" href="${escapeAttribute(image.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(image.publicUrl)}</a></dd></div>
-                            <div><dt>Alt text</dt><dd>${escapeHtml(image.altText || "-")}</dd></div>
-                            <div><dt>Caption</dt><dd>${escapeHtml(image.caption || "-")}</dd></div>
-                            <div><dt>Credit</dt><dd>${escapeHtml(image.credit || "-")}</dd></div>
-                            <div><dt>Source URL</dt><dd>${linkOrDash(image.sourceUrl)}</dd></div>
-                            <div><dt>Rights notes</dt><dd>${escapeHtml(image.rightsNotes || "-")}</dd></div>
-                            <div><dt>Active</dt><dd>${image.active === false ? "no" : "yes"}</dd></div>
-                            <div><dt>Created at</dt><dd>${formatDate(image.createdAt)}</dd></div>
-                            <div><dt>Peso</dt><dd>${formatBytes(image.size_bytes)}${imageSizeLabel(image)}</dd></div>
-                          </dl>
-                          <label for="${snippetId}">Snippet Markdown</label>
-                          <textarea id="${snippetId}" class="snippet" readonly>${escapeHtml(image.markdownSnippet || "")}</textarea>
-                          <div class="toolbar">
-                            <button type="button" class="secondary" data-copy="${snippetId}">Copiar snippet</button>
-                            <button type="button" class="danger" data-remove-body-image="${image.id || ""}" ${image.id ? "" : "disabled"}>Quitar del articulo</button>
+                          <img class="image-preview body-thumbnail" src="${escapeAttribute(image.publicUrl)}" alt="${escapeAttribute(image.altText || "")}">
+                          <div class="asset-card-body">
+                            <h4 class="asset-title">${escapeHtml(image.altText || "Imagen de cuerpo " + (index + 1))}</h4>
+                            <div class="asset-summary">
+                              <a class="public-link" href="${escapeAttribute(image.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(image.publicUrl)}</a><br>
+                              ${formatBytes(image.size_bytes)}${imageSizeLabel(image)}
+                            </div>
+                            <label for="${snippetId}">Snippet Markdown</label>
+                            <textarea id="${snippetId}" class="snippet compact-snippet" readonly>${escapeHtml(image.markdownSnippet || "")}</textarea>
+                            <div class="toolbar compact-actions">
+                              <button type="button" class="secondary" data-copy="${snippetId}">Copiar snippet</button>
+                              <button type="button" class="danger" data-remove-body-image="${image.id || ""}" ${image.id ? "" : "disabled"}>Quitar del articulo</button>
+                            </div>
+                            <details class="asset-legal">
+                              <summary>Metadatos legales</summary>
+                              <dl class="data-list">
+                                <div><dt>Alt text</dt><dd>${escapeHtml(image.altText || "-")}</dd></div>
+                                <div><dt>Caption</dt><dd>${escapeHtml(image.caption || "-")}</dd></div>
+                                <div><dt>Credit</dt><dd>${escapeHtml(image.credit || "-")}</dd></div>
+                                <div><dt>Source URL</dt><dd>${linkOrDash(image.sourceUrl)}</dd></div>
+                                <div><dt>Rights notes</dt><dd>${escapeHtml(image.rightsNotes || "-")}</dd></div>
+                                <div><dt>Active</dt><dd>${image.active === false ? "no" : "yes"}</dd></div>
+                                <div><dt>Created at</dt><dd>${formatDate(image.createdAt)}</dd></div>
+                              </dl>
+                            </details>
                           </div>
                         </div>
                       `;
@@ -651,24 +702,29 @@ public class AdminUiController {
                         const kindLabel = file.kind === "audio" ? "Audio" : "Video";
                         return `
                         <div class="media-file" data-media-file-id="${file.id || ""}">
-                          <h4 style="margin:0 0 8px;">${kindLabel} ${index + 1}</h4>
-                          <dl class="data-list">
-                            <div><dt>Tipo</dt><dd>${escapeHtml(file.kind || "-")}</dd></div>
-                            <div><dt>Titulo</dt><dd>${escapeHtml(file.title || "-")}</dd></div>
-                            <div><dt>URL publica</dt><dd><a class="public-link" href="${escapeAttribute(file.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(file.publicUrl)}</a></dd></div>
-                            <div><dt>Caption / description</dt><dd>${escapeHtml(file.caption || "-")}</dd></div>
-                            <div><dt>Credit</dt><dd>${escapeHtml(file.credit || "-")}</dd></div>
-                            <div><dt>Source URL</dt><dd>${linkOrDash(file.sourceUrl)}</dd></div>
-                            <div><dt>Rights notes</dt><dd>${escapeHtml(file.rightsNotes || "-")}</dd></div>
-                            <div><dt>Active</dt><dd>${file.active === false ? "no" : "yes"}</dd></div>
-                            <div><dt>Created at</dt><dd>${formatDate(file.createdAt)}</dd></div>
-                          </dl>
+                          <h4 class="asset-title">${kindLabel} ${index + 1}: ${escapeHtml(file.title || file.publicUrl || "-")}</h4>
+                          <div class="asset-summary">
+                            <a class="public-link" href="${escapeAttribute(file.publicUrl)}" target="_blank" rel="noreferrer">${escapeHtml(file.publicUrl)}</a>
+                          </div>
                           <label for="${snippetId}">Snippet Markdown</label>
-                          <textarea id="${snippetId}" class="snippet" readonly>${escapeHtml(file.markdownSnippet || "")}</textarea>
-                          <div class="toolbar">
+                          <textarea id="${snippetId}" class="snippet compact-snippet" readonly>${escapeHtml(file.markdownSnippet || "")}</textarea>
+                          <div class="toolbar compact-actions">
                             <button type="button" class="secondary" data-copy="${snippetId}">Copiar snippet</button>
                             <button type="button" class="danger" data-remove-media-file="${file.id || ""}" ${file.id ? "" : "disabled"}>Quitar del articulo</button>
                           </div>
+                          <details class="asset-legal">
+                            <summary>Metadatos legales</summary>
+                            <dl class="data-list">
+                              <div><dt>Tipo</dt><dd>${escapeHtml(file.kind || "-")}</dd></div>
+                              <div><dt>Titulo</dt><dd>${escapeHtml(file.title || "-")}</dd></div>
+                              <div><dt>Caption / description</dt><dd>${escapeHtml(file.caption || "-")}</dd></div>
+                              <div><dt>Credit</dt><dd>${escapeHtml(file.credit || "-")}</dd></div>
+                              <div><dt>Source URL</dt><dd>${linkOrDash(file.sourceUrl)}</dd></div>
+                              <div><dt>Rights notes</dt><dd>${escapeHtml(file.rightsNotes || "-")}</dd></div>
+                              <div><dt>Active</dt><dd>${file.active === false ? "no" : "yes"}</dd></div>
+                              <div><dt>Created at</dt><dd>${formatDate(file.createdAt)}</dd></div>
+                            </dl>
+                          </details>
                         </div>
                       `;
                       }).join("");
