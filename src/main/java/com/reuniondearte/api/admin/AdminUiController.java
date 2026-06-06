@@ -423,18 +423,51 @@ public class AdminUiController {
                       }
                     }
 
-                    function selectedArticleIdOrWarn() {
+                    function currentArticleId() {
                       if (!state.selectedArticleId && state.current?.id) {
                         state.selectedArticleId = String(state.current.id);
                       }
                       if (!state.selectedArticleId && articleForm.dataset.articleId && !editor.hidden) {
                         state.selectedArticleId = articleForm.dataset.articleId;
                       }
-                      if (!state.selectedArticleId) {
+                      return state.selectedArticleId;
+                    }
+
+                    function selectedArticleIdOrWarn() {
+                      const articleId = currentArticleId();
+                      if (!articleId) {
                         setMessage("Selecciona un articulo antes de continuar.");
                         return null;
                       }
-                      return state.selectedArticleId;
+                      return articleId;
+                    }
+
+                    function savedArticleIdOrWarn(actionLabel = "usar esta accion") {
+                      const articleId = currentArticleId();
+                      if (!articleId) {
+                        setMessage(`Guarda primero el articulo antes de ${actionLabel}.`);
+                        return null;
+                      }
+                      return articleId;
+                    }
+
+                    function syncStatusTabs() {
+                      document.querySelectorAll("[data-status]").forEach((item) => item.classList.toggle("active", item.dataset.status === state.status));
+                    }
+
+                    function articlePayload() {
+                      return {
+                        title: document.getElementById("title").value.trim(),
+                        slug: document.getElementById("slug").value.trim(),
+                        excerpt: document.getElementById("excerpt").value,
+                        content_markdown: document.getElementById("contentMarkdown").value,
+                        category: document.getElementById("category").value,
+                        status: document.getElementById("status").value,
+                        canonical_url: emptyToNull(document.getElementById("canonicalUrl").value),
+                        meta_title: emptyToNull(document.getElementById("metaTitle").value),
+                        meta_description: emptyToNull(document.getElementById("metaDescription").value),
+                        noindex: document.getElementById("noindex").checked,
+                      };
                     }
 
                     async function loadArticles(options = {}) {
@@ -782,35 +815,27 @@ public class AdminUiController {
 
                     async function saveArticle(event) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
-                      if (!articleId) return;
+                      const articleId = currentArticleId();
                       setMessage("Guardando...");
-                      const body = {
-                        title: document.getElementById("title").value.trim(),
-                        slug: document.getElementById("slug").value.trim(),
-                        excerpt: document.getElementById("excerpt").value,
-                        content_markdown: document.getElementById("contentMarkdown").value,
-                        category: document.getElementById("category").value,
-                        status: document.getElementById("status").value,
-                        canonical_url: emptyToNull(document.getElementById("canonicalUrl").value),
-                        meta_title: emptyToNull(document.getElementById("metaTitle").value),
-                        meta_description: emptyToNull(document.getElementById("metaDescription").value),
-                        noindex: document.getElementById("noindex").checked,
-                      };
+                      const body = articlePayload();
                       try {
-                        const saved = await api(`/api/admin/articles/${articleId}`, { method: "PUT", body: JSON.stringify(body) });
+                        const saved = articleId
+                          ? await api(`/api/admin/articles/${articleId}`, { method: "PUT", body: JSON.stringify(body) })
+                          : await api("/api/admin/articles", { method: "POST", body: JSON.stringify({ ...body, status: "draft" }) });
                         setCurrentArticle(saved);
                         fillForm(saved);
+                        state.status = saved.status || body.status || "draft";
+                        syncStatusTabs();
                         await loadArticles({ preserveSelection: true });
                         await openArticle(saved.id || articleId);
-                        setMessage("Cambios guardados.");
+                        setMessage(articleId ? "Cambios guardados." : "Articulo creado.");
                       } catch (error) {
                         setMessage(`Error guardando: ${error.message}`);
                       }
                     }
 
                     async function changeStatus(action) {
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn(action === "publish" ? "publicar" : "mover a borrador");
                       if (!articleId) return;
                       if (action === "draft" && state.current?.status === "published") {
                         const confirmed = confirm("Mover este articulo publicado a borrador lo retirara de la API publica. No borra imagenes ni ficheros. ¿Continuar?");
@@ -821,7 +846,7 @@ public class AdminUiController {
                         const updated = await api(`/api/admin/articles/${articleId}/${action}`, { method: "PATCH" });
                         setCurrentArticle(updated);
                         state.status = updated.status;
-                        document.querySelectorAll("[data-status]").forEach((item) => item.classList.toggle("active", item.dataset.status === state.status));
+                        syncStatusTabs();
                         await loadArticles({ preserveSelection: true });
                         await openArticle(updated.id || articleId);
                         setMessage(action === "publish" ? "Articulo publicado." : "Articulo en draft.");
@@ -831,7 +856,7 @@ public class AdminUiController {
                     }
 
                     async function deleteArticle() {
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("eliminar");
                       if (!articleId || !state.current) return;
                       if (state.current.status === "published") {
                         setMessage("No se puede eliminar un articulo publicado. Muevelo primero a borrador.");
@@ -855,7 +880,7 @@ public class AdminUiController {
                     }
 
                     async function sendNewsletterNotice() {
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       if (state.current?.status !== "published") {
                         setMessage("Solo se puede enviar newsletter de articulos publicados.");
@@ -885,7 +910,7 @@ public class AdminUiController {
 
                     async function uploadCover(event) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       const file = document.getElementById("coverFile").files[0];
                       const metadata = imageMetadata();
@@ -908,7 +933,7 @@ public class AdminUiController {
 
                     async function saveCoverMetadata(event) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       if (!state.current?.cover) {
                         setMessage("No hay imagen principal para actualizar.");
@@ -930,7 +955,7 @@ public class AdminUiController {
                     }
 
                     async function removeCover() {
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId || !state.current?.cover) return;
                       const confirmed = confirm("Quitar la imagen principal desasignara la portada del articulo. No borrara el fichero fisico ni el media asset. ¿Continuar?");
                       if (!confirmed) return;
@@ -946,7 +971,7 @@ public class AdminUiController {
 
                     async function importCover(event) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       const body = importPayload("coverImportUrl");
                       if (!body) return;
@@ -962,7 +987,7 @@ public class AdminUiController {
 
                     async function uploadBodyImage(event) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       const file = document.getElementById("bodyImageFile").files[0];
                       const metadata = bodyImageMetadata();
@@ -986,7 +1011,7 @@ public class AdminUiController {
 
                     async function importBodyImage(event) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       const body = importPayload("bodyImportUrl", bodyImageMetadata());
                       if (!body) return;
@@ -1002,7 +1027,7 @@ public class AdminUiController {
                     }
 
                     async function removeBodyImage(articleMediaId) {
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId || !articleMediaId) return;
                       const confirmed = confirm("Quitar esta imagen del cuerpo solo la desasociara del articulo. No borrara el fichero fisico de storage. Â¿Continuar?");
                       if (!confirmed) return;
@@ -1018,7 +1043,7 @@ public class AdminUiController {
 
                     async function uploadMediaFile(event, kind) {
                       event.preventDefault();
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId) return;
                       const inputId = kind === "audio" ? "mediaAudioFile" : "mediaVideoFile";
                       const file = document.getElementById(inputId).files[0];
@@ -1043,7 +1068,7 @@ public class AdminUiController {
                     }
 
                     async function removeMediaFile(articleMediaId) {
-                      const articleId = selectedArticleIdOrWarn();
+                      const articleId = savedArticleIdOrWarn("usar esta accion");
                       if (!articleId || !articleMediaId) return;
                       const confirmed = confirm("Quitar este audio/video solo lo desasociara del articulo. No borrara el fichero fisico de storage. Â¿Continuar?");
                       if (!confirmed) return;
