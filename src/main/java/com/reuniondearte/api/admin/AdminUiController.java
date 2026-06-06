@@ -333,7 +333,7 @@ public class AdminUiController {
                     </section>
                   </main>
                   <script>
-                    const state = { status: "draft", articles: [], current: null, categories: [], comments: [], newsletterStatus: "ACTIVE" };
+                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], comments: [], newsletterStatus: "ACTIVE" };
                     const list = document.getElementById("articleList");
                     const message = document.getElementById("message");
                     const pendingComments = document.getElementById("pendingComments");
@@ -359,7 +359,7 @@ public class AdminUiController {
                       });
                     });
 
-                    document.getElementById("refreshButton").addEventListener("click", loadArticles);
+                    document.getElementById("refreshButton").addEventListener("click", () => loadArticles({ preserveSelection: Boolean(state.selectedArticleId) }));
                     document.getElementById("refreshCommentsButton").addEventListener("click", loadPendingComments);
                     document.getElementById("refreshNewsletterButton").addEventListener("click", loadNewsletter);
                     newsletterStatus.addEventListener("change", () => {
@@ -406,14 +406,49 @@ public class AdminUiController {
                         .join("");
                     }
 
-                    async function loadArticles() {
-                      setMessage(`Cargando ${state.status}...`);
-                      editor.hidden = true;
+                    function clearArticleSelection() {
                       state.current = null;
+                      state.selectedArticleId = null;
+                      delete articleForm.dataset.articleId;
+                      editor.hidden = true;
+                    }
+
+                    function setCurrentArticle(article) {
+                      state.current = article;
+                      state.selectedArticleId = article?.id ? String(article.id) : null;
+                      if (state.selectedArticleId) {
+                        articleForm.dataset.articleId = state.selectedArticleId;
+                      } else {
+                        delete articleForm.dataset.articleId;
+                      }
+                    }
+
+                    function selectedArticleIdOrWarn() {
+                      if (!state.selectedArticleId && state.current?.id) {
+                        state.selectedArticleId = String(state.current.id);
+                      }
+                      if (!state.selectedArticleId && articleForm.dataset.articleId && !editor.hidden) {
+                        state.selectedArticleId = articleForm.dataset.articleId;
+                      }
+                      if (!state.selectedArticleId) {
+                        setMessage("Selecciona un articulo antes de continuar.");
+                        return null;
+                      }
+                      return state.selectedArticleId;
+                    }
+
+                    async function loadArticles(options = {}) {
+                      const preserveSelection = Boolean(options.preserveSelection);
+                      setMessage(`Cargando ${state.status}...`);
+                      if (!preserveSelection) {
+                        clearArticleSelection();
+                      }
                       try {
                         state.articles = await api(`/api/admin/articles?status=${encodeURIComponent(state.status)}`);
                         renderList();
-                        setMessage(state.articles.length ? "Selecciona un articulo." : "No hay articulos en este estado.");
+                        if (!preserveSelection || !state.selectedArticleId) {
+                          setMessage(state.articles.length ? "Selecciona un articulo." : "No hay articulos en este estado.");
+                        }
                       } catch (error) {
                         setMessage(`Error cargando articulos: ${error.message}`);
                       }
@@ -512,15 +547,20 @@ public class AdminUiController {
                         : `<p class="empty">Sin articulos.</p>`;
                       list.querySelectorAll("[data-id]").forEach((button) => {
                         button.addEventListener("click", () => openArticle(button.dataset.id));
+                        button.classList.toggle("active", button.dataset.id === String(state.selectedArticleId || ""));
                       });
                     }
 
                     async function openArticle(id) {
+                      if (!id) {
+                        setMessage("Selecciona un articulo antes de continuar.");
+                        return;
+                      }
                       setMessage("Abriendo articulo...");
                       try {
                         const article = await api(`/api/admin/articles/${id}`);
-                        state.current = article;
-                        list.querySelectorAll("[data-id]").forEach((button) => button.classList.toggle("active", button.dataset.id === String(id)));
+                        setCurrentArticle(article);
+                        list.querySelectorAll("[data-id]").forEach((button) => button.classList.toggle("active", button.dataset.id === String(state.selectedArticleId)));
                         fillForm(article);
                         editor.hidden = false;
                         setMessage(`Articulo #${article.id} abierto.`);
@@ -742,7 +782,8 @@ public class AdminUiController {
 
                     async function saveArticle(event) {
                       event.preventDefault();
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
                       setMessage("Guardando...");
                       const body = {
                         title: document.getElementById("title").value.trim(),
@@ -757,11 +798,11 @@ public class AdminUiController {
                         noindex: document.getElementById("noindex").checked,
                       };
                       try {
-                        const saved = await api(`/api/admin/articles/${state.current.id}`, { method: "PUT", body: JSON.stringify(body) });
-                        state.current = saved;
+                        const saved = await api(`/api/admin/articles/${articleId}`, { method: "PUT", body: JSON.stringify(body) });
+                        setCurrentArticle(saved);
                         fillForm(saved);
-                        await loadArticles();
-                        await openArticle(saved.id);
+                        await loadArticles({ preserveSelection: true });
+                        await openArticle(saved.id || articleId);
                         setMessage("Cambios guardados.");
                       } catch (error) {
                         setMessage(`Error guardando: ${error.message}`);
@@ -769,19 +810,20 @@ public class AdminUiController {
                     }
 
                     async function changeStatus(action) {
-                      if (!state.current) return;
-                      if (action === "draft" && state.current.status === "published") {
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
+                      if (action === "draft" && state.current?.status === "published") {
                         const confirmed = confirm("Mover este articulo publicado a borrador lo retirara de la API publica. No borra imagenes ni ficheros. ¿Continuar?");
                         if (!confirmed) return;
                       }
                       setMessage(action === "publish" ? "Publicando..." : "Moviendo a draft...");
                       try {
-                        const updated = await api(`/api/admin/articles/${state.current.id}/${action}`, { method: "PATCH" });
-                        state.current = updated;
+                        const updated = await api(`/api/admin/articles/${articleId}/${action}`, { method: "PATCH" });
+                        setCurrentArticle(updated);
                         state.status = updated.status;
                         document.querySelectorAll("[data-status]").forEach((item) => item.classList.toggle("active", item.dataset.status === state.status));
-                        await loadArticles();
-                        await openArticle(updated.id);
+                        await loadArticles({ preserveSelection: true });
+                        await openArticle(updated.id || articleId);
                         setMessage(action === "publish" ? "Articulo publicado." : "Articulo en draft.");
                       } catch (error) {
                         setMessage(`Error cambiando estado: ${error.message}`);
@@ -789,7 +831,8 @@ public class AdminUiController {
                     }
 
                     async function deleteArticle() {
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId || !state.current) return;
                       if (state.current.status === "published") {
                         setMessage("No se puede eliminar un articulo publicado. Muevelo primero a borrador.");
                         return;
@@ -802,9 +845,8 @@ public class AdminUiController {
                       }
                       setMessage("Eliminando articulo...");
                       try {
-                        await api(`/api/admin/articles/${state.current.id}`, { method: "DELETE" });
-                        editor.hidden = true;
-                        state.current = null;
+                        await api(`/api/admin/articles/${articleId}`, { method: "DELETE" });
+                        clearArticleSelection();
                         await loadArticles();
                         setMessage("Articulo eliminado. Los ficheros de media no se han borrado fisicamente.");
                       } catch (error) {
@@ -813,8 +855,9 @@ public class AdminUiController {
                     }
 
                     async function sendNewsletterNotice() {
-                      if (!state.current) return;
-                      if (state.current.status !== "published") {
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
+                      if (state.current?.status !== "published") {
                         setMessage("Solo se puede enviar newsletter de articulos publicados.");
                         return;
                       }
@@ -826,7 +869,7 @@ public class AdminUiController {
                       setMessage("Enviando newsletter...");
                       document.getElementById("newsletterSendResult").textContent = "Enviando...";
                       try {
-                        const result = await api(`/api/admin/newsletter/articles/${state.current.id}/send`, {
+                        const result = await api(`/api/admin/newsletter/articles/${articleId}/send`, {
                           method: "POST",
                           body: JSON.stringify({ confirm: "ENVIAR NEWSLETTER" }),
                         });
@@ -842,7 +885,8 @@ public class AdminUiController {
 
                     async function uploadCover(event) {
                       event.preventDefault();
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
                       const file = document.getElementById("coverFile").files[0];
                       const metadata = imageMetadata();
                       if (!file || !metadata.altText) {
@@ -854,9 +898,9 @@ public class AdminUiController {
                       appendMetadata(formData, metadata);
                       setMessage("Subiendo cover...");
                       try {
-                        const result = await api(`/api/admin/articles/${state.current.id}/cover`, { method: "POST", body: formData });
+                        const result = await api(`/api/admin/articles/${articleId}/cover`, { method: "POST", body: formData });
                         setMessage(`Cover guardada: ${result.coverImage}`);
-                        await openArticle(state.current.id);
+                        await openArticle(articleId);
                       } catch (error) {
                         setMessage(`Error subiendo cover: ${error.message}`);
                       }
@@ -864,8 +908,9 @@ public class AdminUiController {
 
                     async function saveCoverMetadata(event) {
                       event.preventDefault();
-                      if (!state.current) return;
-                      if (!state.current.cover) {
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
+                      if (!state.current?.cover) {
                         setMessage("No hay imagen principal para actualizar.");
                         return;
                       }
@@ -876,8 +921,8 @@ public class AdminUiController {
                       }
                       setMessage("Guardando datos de imagen...");
                       try {
-                        await api(`/api/admin/articles/${state.current.id}/cover/metadata`, { method: "PATCH", body: JSON.stringify(metadata) });
-                        await openArticle(state.current.id);
+                        await api(`/api/admin/articles/${articleId}/cover/metadata`, { method: "PATCH", body: JSON.stringify(metadata) });
+                        await openArticle(articleId);
                         setMessage("Datos de imagen guardados.");
                       } catch (error) {
                         setMessage(`Error guardando datos de imagen: ${error.message}`);
@@ -885,13 +930,14 @@ public class AdminUiController {
                     }
 
                     async function removeCover() {
-                      if (!state.current || !state.current.cover) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId || !state.current?.cover) return;
                       const confirmed = confirm("Quitar la imagen principal desasignara la portada del articulo. No borrara el fichero fisico ni el media asset. ¿Continuar?");
                       if (!confirmed) return;
                       setMessage("Quitando imagen principal...");
                       try {
-                        await api(`/api/admin/articles/${state.current.id}/cover`, { method: "DELETE" });
-                        await openArticle(state.current.id);
+                        await api(`/api/admin/articles/${articleId}/cover`, { method: "DELETE" });
+                        await openArticle(articleId);
                         setMessage("Imagen principal quitada. El fichero de storage se conserva.");
                       } catch (error) {
                         setMessage(`Error quitando imagen principal: ${error.message}`);
@@ -900,14 +946,15 @@ public class AdminUiController {
 
                     async function importCover(event) {
                       event.preventDefault();
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
                       const body = importPayload("coverImportUrl");
                       if (!body) return;
                       setMessage("Importando cover...");
                       try {
-                        const result = await api(`/api/admin/articles/${state.current.id}/cover/import`, { method: "POST", body: JSON.stringify(body) });
+                        const result = await api(`/api/admin/articles/${articleId}/cover/import`, { method: "POST", body: JSON.stringify(body) });
                         setMessage(`Cover importada: ${result.coverImage}`);
-                        await openArticle(state.current.id);
+                        await openArticle(articleId);
                       } catch (error) {
                         setMessage(`Error importando cover: ${error.message}`);
                       }
@@ -915,7 +962,8 @@ public class AdminUiController {
 
                     async function uploadBodyImage(event) {
                       event.preventDefault();
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
                       const file = document.getElementById("bodyImageFile").files[0];
                       const metadata = bodyImageMetadata();
                       if (!file || !metadata.altText) {
@@ -927,10 +975,10 @@ public class AdminUiController {
                       appendMetadata(formData, metadata);
                       setMessage("Subiendo imagen de cuerpo...");
                       try {
-                        const result = await api(`/api/admin/articles/${state.current.id}/body-images`, { method: "POST", body: formData });
+                        const result = await api(`/api/admin/articles/${articleId}/body-images`, { method: "POST", body: formData });
                         fillBodyImageMetadata(null);
                         setMessage(`Imagen de cuerpo guardada. Snippet disponible para copiar.`);
-                        await openArticle(state.current.id);
+                        await openArticle(articleId);
                       } catch (error) {
                         setMessage(`Error subiendo imagen de cuerpo: ${error.message}`);
                       }
@@ -938,28 +986,30 @@ public class AdminUiController {
 
                     async function importBodyImage(event) {
                       event.preventDefault();
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
                       const body = importPayload("bodyImportUrl", bodyImageMetadata());
                       if (!body) return;
                       setMessage("Importando imagen de cuerpo...");
                       try {
-                        const result = await api(`/api/admin/articles/${state.current.id}/body-images/import`, { method: "POST", body: JSON.stringify(body) });
+                        const result = await api(`/api/admin/articles/${articleId}/body-images/import`, { method: "POST", body: JSON.stringify(body) });
                         fillBodyImageMetadata(null);
                         setMessage(`Imagen de cuerpo importada. Snippet disponible para copiar.`);
-                        await openArticle(state.current.id);
+                        await openArticle(articleId);
                       } catch (error) {
                         setMessage(`Error importando imagen de cuerpo: ${error.message}`);
                       }
                     }
 
                     async function removeBodyImage(articleMediaId) {
-                      if (!state.current || !articleMediaId) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId || !articleMediaId) return;
                       const confirmed = confirm("Quitar esta imagen del cuerpo solo la desasociara del articulo. No borrara el fichero fisico de storage. Â¿Continuar?");
                       if (!confirmed) return;
                       setMessage("Quitando imagen de cuerpo...");
                       try {
-                        await api(`/api/admin/articles/${state.current.id}/body-images/${articleMediaId}`, { method: "DELETE" });
-                        await openArticle(state.current.id);
+                        await api(`/api/admin/articles/${articleId}/body-images/${articleMediaId}`, { method: "DELETE" });
+                        await openArticle(articleId);
                         setMessage("Imagen de cuerpo quitada. El fichero de storage se conserva.");
                       } catch (error) {
                         setMessage(`Error quitando imagen de cuerpo: ${error.message}`);
@@ -968,7 +1018,8 @@ public class AdminUiController {
 
                     async function uploadMediaFile(event, kind) {
                       event.preventDefault();
-                      if (!state.current) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId) return;
                       const inputId = kind === "audio" ? "mediaAudioFile" : "mediaVideoFile";
                       const file = document.getElementById(inputId).files[0];
                       if (!file) {
@@ -980,11 +1031,11 @@ public class AdminUiController {
                       appendMediaMetadata(formData, mediaFileMetadata());
                       setMessage(kind === "audio" ? "Subiendo audio..." : "Subiendo video...");
                       try {
-                        await api(`/api/admin/articles/${state.current.id}/media-files/${kind}`, { method: "POST", body: formData });
+                        await api(`/api/admin/articles/${articleId}/media-files/${kind}`, { method: "POST", body: formData });
                         fillMediaFileMetadata(null);
                         document.getElementById(inputId).value = "";
                         document.getElementById(kind === "audio" ? "mediaAudioFileHint" : "mediaVideoFileHint").textContent = "";
-                        await openArticle(state.current.id);
+                        await openArticle(articleId);
                         setMessage(kind === "audio" ? "Audio guardado. Snippet disponible para copiar." : "Video guardado. Snippet disponible para copiar.");
                       } catch (error) {
                         setMessage(`${kind === "audio" ? "Error subiendo audio" : "Error subiendo video"}: ${error.message}`);
@@ -992,13 +1043,14 @@ public class AdminUiController {
                     }
 
                     async function removeMediaFile(articleMediaId) {
-                      if (!state.current || !articleMediaId) return;
+                      const articleId = selectedArticleIdOrWarn();
+                      if (!articleId || !articleMediaId) return;
                       const confirmed = confirm("Quitar este audio/video solo lo desasociara del articulo. No borrara el fichero fisico de storage. Â¿Continuar?");
                       if (!confirmed) return;
                       setMessage("Quitando audio/video...");
                       try {
-                        await api(`/api/admin/articles/${state.current.id}/media-files/${articleMediaId}`, { method: "DELETE" });
-                        await openArticle(state.current.id);
+                        await api(`/api/admin/articles/${articleId}/media-files/${articleMediaId}`, { method: "DELETE" });
+                        await openArticle(articleId);
                         setMessage("Audio/video quitado. El fichero de storage se conserva.");
                       } catch (error) {
                         setMessage(`Error quitando audio/video: ${error.message}`);
