@@ -25,8 +25,14 @@ public class Author {
     @Column(nullable = false, unique = true, length = 220)
     private String slug;
 
+    @Column(nullable = false, length = 260)
+    private String role;
+
     @Column(columnDefinition = "TEXT")
     private String bio;
+
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "avatar_media_id")
@@ -42,5 +48,23 @@ public class Author {
     public String getName() {
         return name;
     }
-}
 
+    public String getSlug() {
+        return slug;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public String getAvatarUrl() {
+        if (avatarUrl != null && !avatarUrl.isBlank()) {
+            return avatarUrl;
+        }
+        return avatarMedia == null ? null : avatarMedia.getPublicUrl();
+    }
+}

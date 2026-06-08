@@ -167,6 +167,12 @@ public class AdminUiController {
                               <select id="category" name="category"></select>
                             </div>
                             <div>
+                              <label for="author">Author</label>
+                              <select id="author" name="author"></select>
+                            </div>
+                          </div>
+                          <div class="meta-grid">
+                            <div>
                               <label for="status">Status</label>
                               <select id="status" name="status">
                                 <option value="draft">draft</option>
@@ -333,7 +339,7 @@ public class AdminUiController {
                     </section>
                   </main>
                   <script>
-                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], comments: [], newsletterStatus: "ACTIVE" };
+                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], authors: [], comments: [], newsletterStatus: "ACTIVE" };
                     const list = document.getElementById("articleList");
                     const message = document.getElementById("message");
                     const pendingComments = document.getElementById("pendingComments");
@@ -347,6 +353,7 @@ public class AdminUiController {
                     const mediaAudioForm = document.getElementById("mediaAudioForm");
                     const mediaVideoForm = document.getElementById("mediaVideoForm");
                     const categorySelect = document.getElementById("category");
+                    const authorSelect = document.getElementById("author");
                     const newsletterStatus = document.getElementById("newsletterStatus");
                     const newsletterStats = document.getElementById("newsletterStats");
                     const newsletterSubscribers = document.getElementById("newsletterSubscribers");
@@ -406,6 +413,21 @@ public class AdminUiController {
                         .join("");
                     }
 
+                    async function loadAuthors() {
+                      state.authors = await api("/api/admin/authors");
+                      authorSelect.innerHTML = state.authors
+                        .map((author) => `<option value="${author.id}">${escapeHtml(author.name)} (${escapeHtml(author.slug)})</option>`)
+                        .join("");
+                      selectDefaultAuthor();
+                    }
+
+                    function selectDefaultAuthor() {
+                      const defaultAuthor = state.authors.find((author) => author.slug === "jose-luis-olmedo") || state.authors[0];
+                      if (defaultAuthor?.id) {
+                        authorSelect.value = String(defaultAuthor.id);
+                      }
+                    }
+
                     function clearArticleSelection() {
                       state.current = null;
                       state.selectedArticleId = null;
@@ -462,6 +484,7 @@ public class AdminUiController {
                         excerpt: document.getElementById("excerpt").value,
                         content_markdown: document.getElementById("contentMarkdown").value,
                         category: document.getElementById("category").value,
+                        author_id: authorSelect.value ? Number(authorSelect.value) : null,
                         status: document.getElementById("status").value,
                         canonical_url: emptyToNull(document.getElementById("canonicalUrl").value),
                         meta_title: emptyToNull(document.getElementById("metaTitle").value),
@@ -609,6 +632,11 @@ public class AdminUiController {
                       document.getElementById("excerpt").value = article.excerpt || "";
                       document.getElementById("contentMarkdown").value = article.content_markdown || "";
                       document.getElementById("category").value = article.category || "cultura";
+                      if (article.author_id) {
+                        authorSelect.value = String(article.author_id);
+                      } else {
+                        selectDefaultAuthor();
+                      }
                       document.getElementById("status").value = article.status || "draft";
                       document.getElementById("canonicalUrl").value = article.canonical_url || "";
                       document.getElementById("metaTitle").value = article.meta_title || "";
@@ -1214,6 +1242,7 @@ public class AdminUiController {
                     }
 
                     loadCategories()
+                      .then(loadAuthors)
                       .then(loadArticles)
                       .then(loadNewsletter)
                       .then(loadPendingComments)

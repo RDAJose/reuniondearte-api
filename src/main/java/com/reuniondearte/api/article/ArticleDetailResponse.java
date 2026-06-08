@@ -1,5 +1,6 @@
 package com.reuniondearte.api.article;
 
+import com.reuniondearte.api.author.AuthorResponse;
 import java.time.OffsetDateTime;
 
 public record ArticleDetailResponse(
@@ -11,6 +12,7 @@ public record ArticleDetailResponse(
         String contentHtml,
         String category,
         String author,
+        AuthorResponse authorDetails,
         String coverImage,
         String coverAlt,
         String coverCaption,
@@ -23,7 +25,8 @@ public record ArticleDetailResponse(
 ) {
     static ArticleDetailResponse from(Article article) {
         var category = article.getPrimaryCategory() == null ? null : article.getPrimaryCategory().getSlug();
-        var author = article.getAuthor() == null ? null : article.getAuthor().getName();
+        var authorDetails = AuthorResponse.from(article.getAuthor());
+        var author = authorDetails.name();
         var cover = article.getCoverMedia();
         var coverUrl = cover == null ? null : cover.getPublicUrl();
         var coverAlt = cover == null ? null : cover.getAltText();
@@ -38,6 +41,7 @@ public record ArticleDetailResponse(
                 ArticleContentRenderer.htmlFrom(article),
                 category,
                 author,
+                authorDetails,
                 coverUrl,
                 coverAlt,
                 coverCaption,

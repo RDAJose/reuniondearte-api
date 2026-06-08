@@ -2,6 +2,7 @@ package com.reuniondearte.api.admin;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.reuniondearte.api.article.Article;
+import com.reuniondearte.api.author.AuthorResponse;
 import com.reuniondearte.api.seo.SeoMetadata;
 
 import java.time.OffsetDateTime;
@@ -14,6 +15,8 @@ public record AdminArticleResponse(
         String excerpt,
         @JsonProperty("content_markdown") String contentMarkdown,
         String category,
+        @JsonProperty("author_id") Long authorId,
+        AuthorResponse authorDetails,
         String status,
         @JsonProperty("published_at") OffsetDateTime publishedAt,
         @JsonProperty("canonical_url") String canonicalUrl,
@@ -45,6 +48,8 @@ public record AdminArticleResponse(
                 article.getExcerpt(),
                 article.getContentMarkdown(),
                 article.getPrimaryCategory() == null ? null : article.getPrimaryCategory().getSlug(),
+                article.getAuthor() == null ? null : article.getAuthor().getId(),
+                AuthorResponse.from(article.getAuthor()),
                 article.getStatus().name(),
                 article.getPublishedAt(),
                 article.getCanonicalUrl(),

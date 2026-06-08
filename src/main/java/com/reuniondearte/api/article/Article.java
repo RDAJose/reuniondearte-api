@@ -131,6 +131,7 @@ public class Article {
             String excerpt,
             String contentMarkdown,
             ArticleStatus status,
+            Author author,
             Category primaryCategory,
             OffsetDateTime publishedAt,
             String canonicalUrl
@@ -142,6 +143,7 @@ public class Article {
         this.contentMarkdown = contentMarkdown;
         this.contentHtml = null;
         this.status = status;
+        this.author = author;
         this.primaryCategory = primaryCategory;
         this.publishedAt = status == ArticleStatus.published ? publishedAt : null;
         this.scheduledAt = null;

@@ -3,6 +3,9 @@ package com.reuniondearte.api.admin;
 import com.reuniondearte.api.article.Article;
 import com.reuniondearte.api.article.ArticleRepository;
 import com.reuniondearte.api.article.ArticleStatus;
+import com.reuniondearte.api.author.Author;
+import com.reuniondearte.api.author.AuthorRepository;
+import com.reuniondearte.api.author.AuthorResponse;
 import com.reuniondearte.api.category.Category;
 import com.reuniondearte.api.category.CategoryRepository;
 import com.reuniondearte.api.media.ArticleMediaRepository;
@@ -33,17 +36,20 @@ public class AdminArticleController {
     private static final List<String> MEDIA_FILE_ROLES = List.of("audio", "video");
 
     private final ArticleRepository articles;
+    private final AuthorRepository authors;
     private final CategoryRepository categories;
     private final SeoMetadataRepository seoMetadata;
     private final ArticleMediaRepository articleMedia;
 
     public AdminArticleController(
             ArticleRepository articles,
+            AuthorRepository authors,
             CategoryRepository categories,
             SeoMetadataRepository seoMetadata,
             ArticleMediaRepository articleMedia
     ) {
         this.articles = articles;
+        this.authors = authors;
         this.categories = categories;
         this.seoMetadata = seoMetadata;
         this.articleMedia = articleMedia;
@@ -146,6 +152,7 @@ public class AdminArticleController {
                 blankToNull(request.excerpt()),
                 blankToNull(request.contentMarkdown()),
                 status,
+                author(request.authorId()),
                 category(request.category()),
                 publishedAt(status, request.publishedAt()),
                 blankToNull(request.canonicalUrl())
@@ -173,6 +180,15 @@ public class AdminArticleController {
         String categorySlug = blankToNull(slug) == null ? "cultura" : slug.trim().toLowerCase();
         return categories.findBySlug(categorySlug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown category: " + categorySlug));
+    }
+
+    private Author author(Long authorId) {
+        if (authorId != null) {
+            return authors.findById(authorId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown author: " + authorId));
+        }
+        return authors.findBySlug(AuthorResponse.DEFAULT_SLUG)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Default author is missing"));
     }
 
     private OffsetDateTime publishedAt(ArticleStatus status, OffsetDateTime publishedAt) {

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface FeaturedSlotRepository extends JpaRepository<FeaturedSlot, Long> {
-    @EntityGraph(attributePaths = {"article", "article.author", "article.primaryCategory", "article.coverMedia"})
+    @EntityGraph(attributePaths = {"article", "article.author", "article.author.avatarMedia", "article.primaryCategory", "article.coverMedia"})
     @Query("""
             select slot
             from FeaturedSlot slot
@@ -18,4 +18,3 @@ public interface FeaturedSlotRepository extends JpaRepository<FeaturedSlot, Long
             """)
     List<FeaturedSlot> findVisibleFeaturedSlots();
 }
-
