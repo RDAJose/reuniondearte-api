@@ -2,6 +2,7 @@ package com.reuniondearte.api.article;
 
 import com.reuniondearte.api.author.AuthorResponse;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record ArticleDetailResponse(
         Long id,
@@ -13,6 +14,7 @@ public record ArticleDetailResponse(
         String category,
         String author,
         AuthorResponse authorDetails,
+        List<AuthorResponse> authors,
         String coverImage,
         String coverAlt,
         String coverCaption,
@@ -25,7 +27,8 @@ public record ArticleDetailResponse(
 ) {
     static ArticleDetailResponse from(Article article) {
         var category = article.getPrimaryCategory() == null ? null : article.getPrimaryCategory().getSlug();
-        var authorDetails = AuthorResponse.from(article.getAuthor());
+        var authors = AuthorResponse.fromArticle(article);
+        var authorDetails = authors.get(0);
         var author = authorDetails.name();
         var cover = article.getCoverMedia();
         var coverUrl = cover == null ? null : cover.getPublicUrl();
@@ -42,6 +45,7 @@ public record ArticleDetailResponse(
                 category,
                 author,
                 authorDetails,
+                authors,
                 coverUrl,
                 coverAlt,
                 coverCaption,

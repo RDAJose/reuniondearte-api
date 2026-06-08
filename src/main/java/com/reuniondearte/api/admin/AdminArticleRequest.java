@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record AdminArticleRequest(
         @NotBlank @Size(max = 260) String title,
@@ -14,6 +15,7 @@ public record AdminArticleRequest(
         @JsonProperty("content_markdown") String contentMarkdown,
         String category,
         @JsonProperty("author_id") Long authorId,
+        List<Long> authorIds,
         ArticleStatus status,
         @JsonProperty("published_at") OffsetDateTime publishedAt,
         @JsonProperty("canonical_url") String canonicalUrl,

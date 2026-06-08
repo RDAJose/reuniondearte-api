@@ -167,8 +167,9 @@ public class AdminUiController {
                               <select id="category" name="category"></select>
                             </div>
                             <div>
-                              <label for="author">Author</label>
-                              <select id="author" name="author"></select>
+                              <label for="author">Authors</label>
+                              <select id="author" name="authors" multiple size="4"></select>
+                              <p class="hint">El primer autor seleccionado ser&aacute; el autor principal. Puedes seleccionar varios autores.</p>
                             </div>
                           </div>
                           <div class="meta-grid">
@@ -213,6 +214,7 @@ public class AdminUiController {
                               <p id="newsletterSendResult" class="hint"></p>
                             </div>
                           </details>
+                """.concat("""
                           <details class="side-section" open>
                             <summary>Imagen principal</summary>
                             <div class="side-section-body">
@@ -339,7 +341,7 @@ public class AdminUiController {
                     </section>
                   </main>
                   <script>
-                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], authors: [], comments: [], newsletterStatus: "ACTIVE" };
+                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], authors: [], authorSelection: [], comments: [], newsletterStatus: "ACTIVE" };
                     const list = document.getElementById("articleList");
                     const message = document.getElementById("message");
                     const pendingComments = document.getElementById("pendingComments");
@@ -373,6 +375,7 @@ public class AdminUiController {
                       state.newsletterStatus = newsletterStatus.value;
                       loadNewsletter();
                     });
+                    authorSelect.addEventListener("change", syncAuthorSelection);
                     document.getElementById("publishButton").addEventListener("click", () => changeStatus("publish"));
                     document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
                     document.getElementById("deleteArticleButton").addEventListener("click", deleteArticle);
@@ -424,8 +427,45 @@ public class AdminUiController {
                     function selectDefaultAuthor() {
                       const defaultAuthor = state.authors.find((author) => author.slug === "jose-luis-olmedo") || state.authors[0];
                       if (defaultAuthor?.id) {
-                        authorSelect.value = String(defaultAuthor.id);
+                        selectAuthorIds([defaultAuthor.id]);
                       }
+                    }
+
+                    function selectAuthorIds(authorIds) {
+                      const ids = new Set((authorIds || []).map((id) => String(id)).filter(Boolean));
+                      authorSelect.querySelectorAll("option").forEach((option) => {
+                        option.selected = ids.has(option.value);
+                      });
+                      state.authorSelection = Array.from(ids)
+                        .map((id) => Number(id))
+                        .filter((id) => Number.isFinite(id));
+                      if (!state.authorSelection.length && state.authors.length) {
+                        selectDefaultAuthor();
+                      }
+                    }
+
+                    function syncAuthorSelection() {
+                      const selected = selectedAuthorIdsFromDom();
+                      state.authorSelection = state.authorSelection.filter((id) => selected.includes(id));
+                      selected.forEach((id) => {
+                        if (!state.authorSelection.includes(id)) {
+                          state.authorSelection.push(id);
+                        }
+                      });
+                      if (!state.authorSelection.length) {
+                        selectDefaultAuthor();
+                      }
+                    }
+
+                    function selectedAuthorIdsFromDom() {
+                      return Array.from(authorSelect.selectedOptions)
+                        .map((option) => Number(option.value))
+                        .filter((id) => Number.isFinite(id));
+                    }
+
+                    function selectedAuthorIds() {
+                      const selected = selectedAuthorIdsFromDom();
+                      return state.authorSelection.filter((id) => selected.includes(id));
                     }
 
                     function clearArticleSelection() {
@@ -478,13 +518,15 @@ public class AdminUiController {
                     }
 
                     function articlePayload() {
+                      const authorIds = selectedAuthorIds();
                       return {
                         title: document.getElementById("title").value.trim(),
                         slug: document.getElementById("slug").value.trim(),
                         excerpt: document.getElementById("excerpt").value,
                         content_markdown: document.getElementById("contentMarkdown").value,
                         category: document.getElementById("category").value,
-                        author_id: authorSelect.value ? Number(authorSelect.value) : null,
+                        author_id: authorIds.length ? authorIds[0] : null,
+                        authorIds,
                         status: document.getElementById("status").value,
                         canonical_url: emptyToNull(document.getElementById("canonicalUrl").value),
                         meta_title: emptyToNull(document.getElementById("metaTitle").value),
@@ -632,11 +674,10 @@ public class AdminUiController {
                       document.getElementById("excerpt").value = article.excerpt || "";
                       document.getElementById("contentMarkdown").value = article.content_markdown || "";
                       document.getElementById("category").value = article.category || "cultura";
-                      if (article.author_id) {
-                        authorSelect.value = String(article.author_id);
-                      } else {
-                        selectDefaultAuthor();
-                      }
+                      const authorIds = Array.isArray(article.authorIds) && article.authorIds.length
+                        ? article.authorIds
+                        : (article.author_id ? [article.author_id] : []);
+                      selectAuthorIds(authorIds);
                       document.getElementById("status").value = article.status || "draft";
                       document.getElementById("canonicalUrl").value = article.canonical_url || "";
                       document.getElementById("metaTitle").value = article.meta_title || "";
@@ -1250,7 +1291,7 @@ public class AdminUiController {
                   </script>
                 </body>
                 </html>
-                """;
+                """);
     }
 
     @GetMapping(value = "/admin/tools/editor-bloques", produces = MediaType.TEXT_HTML_VALUE)
@@ -1316,6 +1357,7 @@ public class AdminUiController {
                       </ol>
                     </section>
                   </main>
+                """.concat("""
                   <script>
                     const markdownOutput = document.getElementById("markdownOutput");
                     const copyStatus = document.getElementById("copyStatus");
@@ -1423,6 +1465,6 @@ public class AdminUiController {
                   </script>
                 </body>
                 </html>
-                """;
+                """);
     }
 }

@@ -4,6 +4,7 @@ import com.reuniondearte.api.author.Author;
 import com.reuniondearte.api.category.Category;
 import com.reuniondearte.api.media.MediaAsset;
 import jakarta.persistence.Column;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -13,7 +14,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -45,6 +51,10 @@ public class Article {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")
     private Author author;
+
+    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position ASC")
+    private List<ArticleAuthor> articleAuthors = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "primary_category_id")
@@ -99,6 +109,10 @@ public class Article {
 
     public Author getAuthor() {
         return author;
+    }
+
+    public List<ArticleAuthor> getArticleAuthors() {
+        return articleAuthors;
     }
 
     public Category getPrimaryCategory() {
@@ -183,6 +197,21 @@ public class Article {
 
     public void updateCoverMedia(MediaAsset coverMedia) {
         this.coverMedia = coverMedia;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void replaceAuthors(List<Author> authors) {
+        this.articleAuthors.clear();
+        LinkedHashSet<Long> seen = new LinkedHashSet<>();
+        int position = 0;
+        for (Author author : authors) {
+            if (author == null || author.getId() == null || !seen.add(author.getId())) {
+                continue;
+            }
+            this.articleAuthors.add(new ArticleAuthor(this, author, position));
+            position++;
+        }
+        this.author = this.articleAuthors.isEmpty() ? null : this.articleAuthors.get(0).getAuthor();
         this.updatedAt = OffsetDateTime.now();
     }
 

@@ -16,7 +16,9 @@ public record AdminArticleResponse(
         @JsonProperty("content_markdown") String contentMarkdown,
         String category,
         @JsonProperty("author_id") Long authorId,
+        List<Long> authorIds,
         AuthorResponse authorDetails,
+        List<AuthorResponse> authors,
         String status,
         @JsonProperty("published_at") OffsetDateTime publishedAt,
         @JsonProperty("canonical_url") String canonicalUrl,
@@ -41,6 +43,12 @@ public record AdminArticleResponse(
             List<AdminArticleMediaResponse> bodyImages,
             List<AdminArticleMediaFileResponse> mediaFiles
     ) {
+        List<AuthorResponse> authorResponses = AuthorResponse.fromArticle(article);
+        AuthorResponse primaryAuthor = authorResponses.get(0);
+        List<Long> authorIds = authorResponses.stream()
+                .map(AuthorResponse::id)
+                .filter(id -> id != null)
+                .toList();
         return new AdminArticleResponse(
                 article.getId(),
                 article.getTitle(),
@@ -48,8 +56,10 @@ public record AdminArticleResponse(
                 article.getExcerpt(),
                 article.getContentMarkdown(),
                 article.getPrimaryCategory() == null ? null : article.getPrimaryCategory().getSlug(),
-                article.getAuthor() == null ? null : article.getAuthor().getId(),
-                AuthorResponse.from(article.getAuthor()),
+                primaryAuthor.id(),
+                authorIds,
+                primaryAuthor,
+                authorResponses,
                 article.getStatus().name(),
                 article.getPublishedAt(),
                 article.getCanonicalUrl(),

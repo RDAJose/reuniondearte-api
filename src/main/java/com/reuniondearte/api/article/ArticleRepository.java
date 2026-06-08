@@ -6,20 +6,20 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ArticleRepository extends JpaRepository<Article, Long> {
-    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "primaryCategory", "coverMedia"})
+    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "articleAuthors", "articleAuthors.author", "articleAuthors.author.avatarMedia", "primaryCategory", "coverMedia"})
     List<Article> findByStatusOrderByPublishedAtDesc(ArticleStatus status);
 
-    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "primaryCategory", "coverMedia"})
+    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "articleAuthors", "articleAuthors.author", "articleAuthors.author.avatarMedia", "primaryCategory", "coverMedia"})
     List<Article> findByStatusOrderByUpdatedAtDesc(ArticleStatus status);
 
-    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "primaryCategory", "coverMedia"})
+    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "articleAuthors", "articleAuthors.author", "articleAuthors.author.avatarMedia", "primaryCategory", "coverMedia"})
     Optional<Article> findBySlugAndStatus(String slug, ArticleStatus status);
 
     Optional<Article> findBySlug(String slug);
 
-    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "primaryCategory", "coverMedia"})
+    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "articleAuthors", "articleAuthors.author", "articleAuthors.author.avatarMedia", "primaryCategory", "coverMedia"})
     Optional<Article> findWithRelationsById(Long id);
 
-    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "primaryCategory", "coverMedia"})
+    @EntityGraph(attributePaths = {"author", "author.avatarMedia", "articleAuthors", "articleAuthors.author", "articleAuthors.author.avatarMedia", "primaryCategory", "coverMedia"})
     List<Article> findByPrimaryCategorySlugAndStatusOrderByPublishedAtDesc(String slug, ArticleStatus status);
 }

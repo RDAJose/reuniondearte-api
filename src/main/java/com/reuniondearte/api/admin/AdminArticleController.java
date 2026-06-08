@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @RestController
@@ -146,17 +147,20 @@ public class AdminArticleController {
     }
 
     private void apply(Article article, AdminArticleRequest request, ArticleStatus status) {
+        List<Author> selectedAuthors = authors(request);
+        Author primaryAuthor = selectedAuthors.get(0);
         article.applyEditorialUpdate(
                 request.title(),
                 request.slug(),
                 blankToNull(request.excerpt()),
                 blankToNull(request.contentMarkdown()),
                 status,
-                author(request.authorId()),
+                primaryAuthor,
                 category(request.category()),
                 publishedAt(status, request.publishedAt()),
                 blankToNull(request.canonicalUrl())
         );
+        article.replaceAuthors(selectedAuthors);
     }
 
     private SeoMetadata saveSeo(Article article, AdminArticleRequest request) {
@@ -182,13 +186,34 @@ public class AdminArticleController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown category: " + categorySlug));
     }
 
+    private List<Author> authors(AdminArticleRequest request) {
+        List<Long> requestedAuthorIds = request.authorIds();
+        if (requestedAuthorIds == null || requestedAuthorIds.isEmpty()) {
+            requestedAuthorIds = request.authorId() == null ? List.of(defaultAuthor().getId()) : List.of(request.authorId());
+        }
+        LinkedHashSet<Long> uniqueAuthorIds = new LinkedHashSet<>();
+        requestedAuthorIds.stream()
+                .filter(id -> id != null)
+                .forEach(uniqueAuthorIds::add);
+        if (uniqueAuthorIds.isEmpty()) {
+            uniqueAuthorIds.add(defaultAuthor().getId());
+        }
+        return uniqueAuthorIds.stream()
+                .map(this::author)
+                .toList();
+    }
+
+    private Author defaultAuthor() {
+        return authors.findBySlug(AuthorResponse.DEFAULT_SLUG)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Default author is missing"));
+    }
+
     private Author author(Long authorId) {
         if (authorId != null) {
             return authors.findById(authorId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown author: " + authorId));
         }
-        return authors.findBySlug(AuthorResponse.DEFAULT_SLUG)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Default author is missing"));
+        return defaultAuthor();
     }
 
     private OffsetDateTime publishedAt(ArticleStatus status, OffsetDateTime publishedAt) {
