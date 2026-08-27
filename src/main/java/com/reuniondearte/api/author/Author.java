@@ -34,6 +34,12 @@ public class Author {
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
+    @Column(name = "website_url", columnDefinition = "TEXT")
+    private String websiteUrl;
+
+    @Column(name = "letterboxd_url", columnDefinition = "TEXT")
+    private String letterboxdUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "avatar_media_id")
     private MediaAsset avatarMedia;
@@ -66,5 +72,36 @@ public class Author {
             return avatarUrl;
         }
         return avatarMedia == null ? null : avatarMedia.getPublicUrl();
+    }
+
+    public String getWebsiteUrl() {
+        return websiteUrl;
+    }
+
+    public String getLetterboxdUrl() {
+        return letterboxdUrl;
+    }
+
+    public void applyAdminUpdate(
+            String name,
+            String slug,
+            String role,
+            String bio,
+            String avatarUrl,
+            String websiteUrl,
+            String letterboxdUrl
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.name = name;
+        this.slug = slug;
+        this.role = role;
+        this.bio = bio;
+        this.avatarUrl = avatarUrl;
+        this.websiteUrl = websiteUrl;
+        this.letterboxdUrl = letterboxdUrl;
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
     }
 }

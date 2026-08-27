@@ -94,11 +94,19 @@ public class AdminUiController {
                     .subscriber-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
                     .subscriber-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; border: 1px solid var(--line); background: #fff; padding: 8px; font-size: 13px; }
                     .subscriber-row span { color: var(--muted); font-size: 12px; }
+                    .author-manager { margin-bottom: 18px; }
+                    .author-layout { display: grid; grid-template-columns: minmax(220px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
+                    .author-list { display: grid; gap: 6px; max-height: 360px; overflow: auto; }
+                    .author-row { display: block; width: 100%; text-align: left; background: #fff; color: var(--ink); border: 1px solid var(--line); padding: 9px; }
+                    .author-row.active { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); }
+                    .author-row strong { display: block; font-size: 13px; line-height: 1.25; }
+                    .author-row span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
                     .empty { color: var(--muted); padding: 20px 0; }
                     @media (max-width: 880px) {
                       main { grid-template-columns: 1fr; }
                       aside { border-right: 0; border-bottom: 1px solid var(--line); }
                       .grid { grid-template-columns: 1fr; }
+                      .author-layout { grid-template-columns: 1fr; }
                       .editor-sidebar { position: static; max-height: none; overflow: visible; }
                       #bodyImages, #mediaFiles { max-height: none; overflow: visible; }
                       .body-image { grid-template-columns: 76px minmax(0, 1fr); }
@@ -143,6 +151,49 @@ public class AdminUiController {
                           <button type="button" id="refreshCommentsButton" class="secondary">Recargar</button>
                         </div>
                         <div id="pendingComments" class="comment-list"></div>
+                      </div>
+                      <div class="panel author-manager">
+                        <div class="toolbar">
+                          <h2 style="margin:0; font-size:16px; flex:1;">Autores</h2>
+                          <button type="button" id="newAuthorButton" class="secondary">Nuevo autor</button>
+                          <button type="button" id="refreshAuthorsButton" class="secondary">Recargar</button>
+                        </div>
+                        <div class="author-layout">
+                          <div id="authorList" class="author-list"></div>
+                          <form id="authorForm">
+                            <h3 id="authorFormTitle">Nuevo autor</h3>
+                            <div class="meta-grid">
+                              <div>
+                                <label for="authorName">Nombre</label>
+                                <input id="authorName" name="name" required maxlength="180">
+                              </div>
+                              <div>
+                                <label for="authorSlug">Slug</label>
+                                <input id="authorSlug" name="slug" required maxlength="220" pattern="[a-z0-9]+(-[a-z0-9]+)+">
+                              </div>
+                            </div>
+                            <label for="authorRole">Funcion</label>
+                            <input id="authorRole" name="role" required maxlength="260">
+                            <label for="authorBio">Biografia</label>
+                            <textarea id="authorBio" name="bio"></textarea>
+                            <div class="meta-grid">
+                              <div>
+                                <label for="authorAvatarUrl">Avatar URL</label>
+                                <input id="authorAvatarUrl" name="avatarUrl" placeholder="/authors/nombre.jpeg">
+                              </div>
+                              <div>
+                                <label for="authorWebsiteUrl">Web oficial</label>
+                                <input id="authorWebsiteUrl" name="websiteUrl" type="url" placeholder="https://...">
+                              </div>
+                            </div>
+                            <label for="authorLetterboxdUrl">Letterboxd</label>
+                            <input id="authorLetterboxdUrl" name="letterboxdUrl" type="url" placeholder="https://letterboxd.com/...">
+                            <div class="toolbar" style="margin-top:12px; margin-bottom:0;">
+                              <button type="submit" id="saveAuthorButton">Crear autor</button>
+                              <button type="button" id="clearAuthorButton" class="secondary">Limpiar</button>
+                            </div>
+                          </form>
+                        </div>
                       </div>
                       <div id="editor" class="grid" hidden>
                         <form id="articleForm" class="panel">
@@ -341,10 +392,12 @@ public class AdminUiController {
                     </section>
                   </main>
                   <script>
-                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], authors: [], authorSelection: [], comments: [], newsletterStatus: "ACTIVE" };
+                    const state = { status: "draft", articles: [], current: null, selectedArticleId: null, categories: [], authors: [], authorSelection: [], selectedAuthorId: null, comments: [], newsletterStatus: "ACTIVE" };
                     const list = document.getElementById("articleList");
                     const message = document.getElementById("message");
                     const pendingComments = document.getElementById("pendingComments");
+                    const authorList = document.getElementById("authorList");
+                    const authorForm = document.getElementById("authorForm");
                     const editor = document.getElementById("editor");
                     const articleForm = document.getElementById("articleForm");
                     const coverForm = document.getElementById("coverForm");
@@ -376,6 +429,10 @@ public class AdminUiController {
                       loadNewsletter();
                     });
                     authorSelect.addEventListener("change", syncAuthorSelection);
+                    authorForm.addEventListener("submit", saveAuthor);
+                    document.getElementById("newAuthorButton").addEventListener("click", clearAuthorForm);
+                    document.getElementById("clearAuthorButton").addEventListener("click", clearAuthorForm);
+                    document.getElementById("refreshAuthorsButton").addEventListener("click", () => loadAuthors({ preserveSelection: true }));
                     document.getElementById("publishButton").addEventListener("click", () => changeStatus("publish"));
                     document.getElementById("draftButton").addEventListener("click", () => changeStatus("draft"));
                     document.getElementById("deleteArticleButton").addEventListener("click", deleteArticle);
@@ -401,7 +458,15 @@ public class AdminUiController {
                       });
                       if (!response.ok) {
                         const text = await response.text();
-                        throw new Error(text || `${response.status} ${response.statusText}`);
+                        try {
+                          const error = JSON.parse(text);
+                          throw new Error(error.message || text || `${response.status} ${response.statusText}`);
+                        } catch (parseError) {
+                          if (parseError instanceof SyntaxError) {
+                            throw new Error(text || `${response.status} ${response.statusText}`);
+                          }
+                          throw parseError;
+                        }
                       }
                       if (response.status === 204) {
                         return null;
@@ -416,12 +481,100 @@ public class AdminUiController {
                         .join("");
                     }
 
-                    async function loadAuthors() {
+                    async function loadAuthors(options = {}) {
+                      const preserveSelection = Boolean(options.preserveSelection);
+                      const selectedArticleAuthors = preserveSelection ? selectedAuthorIds() : [];
+                      const selectedManagedAuthor = preserveSelection ? state.selectedAuthorId : null;
                       state.authors = await api("/api/admin/authors");
                       authorSelect.innerHTML = state.authors
                         .map((author) => `<option value="${author.id}">${escapeHtml(author.name)} (${escapeHtml(author.slug)})</option>`)
                         .join("");
-                      selectDefaultAuthor();
+                      renderAuthors();
+                      if (selectedManagedAuthor && state.authors.some((author) => author.id === selectedManagedAuthor)) {
+                        editAuthor(selectedManagedAuthor);
+                      } else if (!state.selectedAuthorId) {
+                        clearAuthorForm();
+                      }
+                      if (selectedArticleAuthors.length) {
+                        selectAuthorIds(selectedArticleAuthors.filter((id) => state.authors.some((author) => author.id === id)));
+                      } else {
+                        selectDefaultAuthor();
+                      }
+                    }
+
+                    function renderAuthors() {
+                      authorList.innerHTML = state.authors.length
+                        ? state.authors.map((author) => `
+                            <button type="button" class="author-row" data-author-id="${author.id}">
+                              <strong>${escapeHtml(author.name || "(sin nombre)")}</strong>
+                              <span>${escapeHtml(author.slug || "")}</span>
+                            </button>
+                          `).join("")
+                        : `<p class="empty">Sin autores.</p>`;
+                      authorList.querySelectorAll("[data-author-id]").forEach((button) => {
+                        const id = Number(button.dataset.authorId);
+                        button.addEventListener("click", () => editAuthor(id));
+                        button.classList.toggle("active", id === state.selectedAuthorId);
+                      });
+                    }
+
+                    function editAuthor(id) {
+                      const author = state.authors.find((item) => item.id === Number(id));
+                      if (!author) {
+                        return;
+                      }
+                      state.selectedAuthorId = author.id;
+                      authorForm.dataset.authorId = String(author.id);
+                      document.getElementById("authorFormTitle").textContent = `Editar autor #${author.id}`;
+                      document.getElementById("saveAuthorButton").textContent = "Actualizar autor";
+                      document.getElementById("authorName").value = author.name || "";
+                      document.getElementById("authorSlug").value = author.slug || "";
+                      document.getElementById("authorRole").value = author.role || "";
+                      document.getElementById("authorBio").value = author.bio || "";
+                      document.getElementById("authorAvatarUrl").value = author.avatarUrl || "";
+                      document.getElementById("authorWebsiteUrl").value = author.websiteUrl || "";
+                      document.getElementById("authorLetterboxdUrl").value = author.letterboxdUrl || "";
+                      renderAuthors();
+                    }
+
+                    function clearAuthorForm() {
+                      state.selectedAuthorId = null;
+                      delete authorForm.dataset.authorId;
+                      authorForm.reset();
+                      document.getElementById("authorFormTitle").textContent = "Nuevo autor";
+                      document.getElementById("saveAuthorButton").textContent = "Crear autor";
+                      renderAuthors();
+                    }
+
+                    function authorPayload() {
+                      return {
+                        name: document.getElementById("authorName").value.trim(),
+                        slug: document.getElementById("authorSlug").value.trim(),
+                        role: document.getElementById("authorRole").value.trim(),
+                        bio: document.getElementById("authorBio").value.trim(),
+                        avatarUrl: document.getElementById("authorAvatarUrl").value.trim(),
+                        websiteUrl: document.getElementById("authorWebsiteUrl").value.trim(),
+                        letterboxdUrl: document.getElementById("authorLetterboxdUrl").value.trim(),
+                      };
+                    }
+
+                    async function saveAuthor(event) {
+                      event.preventDefault();
+                      const id = authorForm.dataset.authorId;
+                      const creating = !id;
+                      setMessage(creating ? "Creando autor..." : "Actualizando autor...");
+                      try {
+                        const author = await api(creating ? "/api/admin/authors" : `/api/admin/authors/${id}`, {
+                          method: creating ? "POST" : "PUT",
+                          body: JSON.stringify(authorPayload()),
+                        });
+                        state.selectedAuthorId = author.id;
+                        await loadAuthors({ preserveSelection: true });
+                        editAuthor(author.id);
+                        setMessage(creating ? "Autor creado." : "Autor actualizado.");
+                      } catch (error) {
+                        setMessage(`Error guardando autor: ${error.message}`);
+                      }
                     }
 
                     function selectDefaultAuthor() {

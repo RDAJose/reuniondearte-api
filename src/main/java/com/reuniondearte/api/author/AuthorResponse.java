@@ -10,7 +10,9 @@ public record AuthorResponse(
         String slug,
         String role,
         String bio,
-        String avatarUrl
+        String avatarUrl,
+        String websiteUrl,
+        String letterboxdUrl
 ) {
     public static final String DEFAULT_NAME = "José Luis Olmedo Barrionuevo";
     public static final String DEFAULT_SLUG = "jose-luis-olmedo";
@@ -27,12 +29,14 @@ public record AuthorResponse(
                 author.getSlug(),
                 author.getRole(),
                 author.getBio(),
-                author.getAvatarUrl()
+                author.getAvatarUrl(),
+                author.getWebsiteUrl(),
+                author.getLetterboxdUrl()
         );
     }
 
     public static AuthorResponse defaultAuthor() {
-        return new AuthorResponse(null, DEFAULT_NAME, DEFAULT_SLUG, DEFAULT_ROLE, DEFAULT_BIO, null);
+        return new AuthorResponse(null, DEFAULT_NAME, DEFAULT_SLUG, DEFAULT_ROLE, DEFAULT_BIO, null, null, null);
     }
 
     public static List<AuthorResponse> fromArticle(Article article) {
